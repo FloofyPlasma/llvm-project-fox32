@@ -8,4 +8,7 @@
 #define GET_REGINFO_ENUM
 #include "Fox32GenRegisterInfo.inc"
 
+#define GET_INSTRINFO_ENUM
+#include "Fox32GenInstrInfo.inc"
+
 #endif

@@ -4,8 +4,12 @@
 include "llvm/Target/Target.td"
 
 include "Fox32RegisterInfo.td"
+include "Fox32InstrInfo.td"
 
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
+def Fox32InstrInfo : InstrInfo {}
+
 def Fox32 : Target {
+    let InstructionSet = Fox32InstrInfo;
 }

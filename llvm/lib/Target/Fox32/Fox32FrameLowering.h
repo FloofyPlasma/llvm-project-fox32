@@ -10,18 +10,19 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 namespace llvm {
-    class Fox32FrameLowering : public TargetFrameLowering {
-        explicit Fox32FrameLowering(const TargetSubtargetInfo &STI, Align Alignment)
-            : TargetFrameLowering(StackGrowsDown, Alignment, 0, Alignment) {}
+class Fox32FrameLowering : public TargetFrameLowering {
+public:
+  explicit Fox32FrameLowering(const TargetSubtargetInfo &STI, Align Alignment)
+      : TargetFrameLowering(StackGrowsDown, Alignment, 0, Alignment) {}
 
-        void emitPrologue(MachineFunction &MF,
-                          MachineBasicBlock &MBB) const override {}
+  void emitPrologue(MachineFunction &MF,
+                    MachineBasicBlock &MBB) const override {}
 
-        void emitEpilogue(MachineFunction &MF,
-                          MachineBasicBlock &MBB) const override {}
+  void emitEpilogue(MachineFunction &MF,
+                    MachineBasicBlock &MBB) const override {}
 
-        bool hasFPImpl(const MachineFunction &MF) const override { return true; }
-    };
+  bool hasFPImpl(const MachineFunction &MF) const override { return true; }
+};
 } // end namespace llvm
 
 #endif

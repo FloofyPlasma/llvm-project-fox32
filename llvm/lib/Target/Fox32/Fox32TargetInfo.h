@@ -4,7 +4,7 @@
 namespace llvm {
 class Target;
 
-Target& getTheFox32Target();
+Target &getTheFox32Target();
 
 } // namespace llvm
 
