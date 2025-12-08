@@ -528,26 +528,26 @@ set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 # List of all targets to be built by default:
 set(LLVM_ALL_TARGETS
-  AArch64
-  AMDGPU
-  ARM
-  AVR
-  BPF
-  Hexagon
-  Lanai
-  LoongArch
-  Mips
-  MSP430
-  NVPTX
-  PowerPC
-  RISCV
-  Sparc
-  SPIRV
-  SystemZ
-  VE
-  WebAssembly
-  X86
-  XCore
+  #AArch64
+  #AMDGPU
+  #ARM
+  #AVR
+  #BPF
+  #Hexagon
+  #Lanai
+  #LoongArch
+  #Mips
+  #MSP430
+  #NVPTX
+  #PowerPC
+  #RISCV
+  #Sparc
+  #SPIRV
+  #SystemZ
+  #VE
+  #WebAssembly
+  #X86
+  #XCore
   Fox32
   )
 
@@ -1045,7 +1045,7 @@ else()
   endif()
 endif()
 
-set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE_DEFAULT}" CACHE STRING
+set(LLVM_DEFAULT_TARGET_TRIPLE "fox32" CACHE STRING
     "Default target for which LLVM will generate code." )
 message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
