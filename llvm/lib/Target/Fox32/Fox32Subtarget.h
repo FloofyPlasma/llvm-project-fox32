@@ -18,17 +18,17 @@
 namespace llvm {
 class Fox32Subtarget : public Fox32GenSubtargetInfo {
 protected:
-  SelectionDAGTargetInfo TSInfo;
-  Fox32InstrInfo InstrInfo;
-  Fox32FrameLowering FrameLowering;
-  Fox32TargetLowering TLInfo;
   Fox32RegisterInfo RegInfo;
+  SelectionDAGTargetInfo TSInfo;
+  Fox32FrameLowering FrameLowering;
+  Fox32InstrInfo InstrInfo;
+  Fox32TargetLowering TLInfo;
 
 public:
   Fox32Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                  const TargetMachine &TM)
-      : Fox32GenSubtargetInfo(TT, CPU, CPU, FS), InstrInfo(*this),
-        FrameLowering(*this, Align(8)), TLInfo(TM, *this) {}
+      : Fox32GenSubtargetInfo(TT, CPU, CPU, FS), FrameLowering(*this, Align(8)),
+        InstrInfo(*this), TLInfo(TM, *this) {}
 
   const Fox32RegisterInfo *getRegisterInfo() const override { return &RegInfo; }
 

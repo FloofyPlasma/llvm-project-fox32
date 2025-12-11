@@ -17,6 +17,18 @@ class Fox32InstrInfo : public Fox32GenInstrInfo {
 public:
   explicit Fox32InstrInfo(const Fox32Subtarget &STI);
 
+  void storeRegToStackSlot(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI, Register SrcReg,
+                           bool isKill, int FrameIndex,
+                           const TargetRegisterClass *RC, Register VReg,
+                           MachineInstr::MIFlag Flags) const override;
+
+  void loadRegFromStackSlot(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MI, Register DestReg,
+                            int FrameIndex, const TargetRegisterClass *RC,
+                            Register VReg,
+                            MachineInstr::MIFlag Flags) const override;
+
 protected:
   const Fox32Subtarget &Subtarget;
 };

@@ -8,6 +8,15 @@
 #include "llvm/CodeGen/SelectionDAGISel.h"
 
 namespace llvm {
+class FunctionPass;
+class Fox32TargetMachine;
+class PassRegistry;
+
+FunctionPass *createFox32ISelDagLegacy(Fox32TargetMachine &TM,
+                                       CodeGenOptLevel OptLevel);
+
+void initializeFox32DAGToDAGISelLegacyPass(PassRegistry &);
+
 class Fox32DAGToDagISel final : public SelectionDAGISel {
   const Fox32Subtarget *SubTarget;
 

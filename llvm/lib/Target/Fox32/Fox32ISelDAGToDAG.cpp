@@ -1,7 +1,6 @@
 #include "Fox32ISelDAGToDAG.h"
 #include "Fox32Subtarget.h"
 #include "Fox32TargetMachine.h"
-
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Pass.h"
@@ -23,8 +22,8 @@ public:
 
 char Fox32DAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(Fox32DAGToDAGISelLegacy, DEBUG_TYPE, "Fox32-isel", false,
-                false);
+INITIALIZE_PASS_BEGIN(Fox32DAGToDAGISelLegacy, DEBUG_TYPE, "Fox32 DAG->DAG Instruction Selection", false, false)
+INITIALIZE_PASS_END(Fox32DAGToDAGISelLegacy, DEBUG_TYPE, "Fox32 DAG->DAG Instruction Selection", false, false)
 
 FunctionPass *llvm::createFox32ISelDagLegacy(Fox32TargetMachine &TM,
                                              CodeGenOptLevel OptLevel) {
@@ -32,18 +31,17 @@ FunctionPass *llvm::createFox32ISelDagLegacy(Fox32TargetMachine &TM,
 }
 
 bool Fox32DAGToDagISel::runOnMachineFunction(MachineFunction &MF) {
-  SubTarget =
-      &static_cast<const Fox32Subtarget &>(MF.getSubtarget<Fox32Subtarget>());
+  SubTarget = &MF.getSubtarget<Fox32Subtarget>();
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
 void Fox32DAGToDagISel::Select(SDNode *Node) {
-  // Implement the selection logic here.
-  // This is where you would match the SelectionDAG nodes to the target
-  // instructions. For example, you might want to match a specific node type and
-  // then create a corresponding machine instruction.
-
-  // Example: if (Node->getOpcode() == ISD::ADD) { ... }
-  // This is just a placeholder for the actual implementation.
+  // If already selected, skip
+  if (Node->isMachineOpcode()) {
+    Node->setNodeId(-1);
+    return;
+  }
+  
+  // Try to select using tablegen-generated patterns
   SelectCode(Node);
 }

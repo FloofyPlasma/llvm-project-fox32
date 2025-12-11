@@ -10,9 +10,11 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 namespace llvm {
+class Fox32Subtarget;
+
 class Fox32FrameLowering : public TargetFrameLowering {
 public:
-  explicit Fox32FrameLowering(const TargetSubtargetInfo &STI, Align Alignment)
+  explicit Fox32FrameLowering(const Fox32Subtarget &STI, Align Alignment)
       : TargetFrameLowering(StackGrowsDown, Alignment, 0, Alignment) {}
 
   void emitPrologue(MachineFunction &MF,
@@ -22,6 +24,12 @@ public:
                     MachineBasicBlock &MBB) const override {}
 
   bool hasFPImpl(const MachineFunction &MF) const override { return true; }
+
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const override {
+    return MBB.erase(MI);
+  }
 };
 } // end namespace llvm
 

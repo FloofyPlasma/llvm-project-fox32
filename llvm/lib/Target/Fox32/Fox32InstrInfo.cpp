@@ -16,3 +16,19 @@ Fox32InstrInfo::Fox32InstrInfo(const Fox32Subtarget &STI)
                         Fox32::ADJCALLSTACKUP,
                         /* CatchRetOpcode */ ~0u, /* ReturnOpcode */ ~0u),
       Subtarget(STI) {}
+
+void Fox32InstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
+  // TODO: Implement for real
+}
+
+void Fox32InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MI,
+                                          Register DestReg, int FrameIndex,
+                                          const TargetRegisterClass *RC,
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
+  // TODO: Implement for real
+}

@@ -218,6 +218,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case x86:
   case x86_64:      return "x86";
 
+  case fox32:       return "fox32";
+
   case xcore:       return "xcore";
 
   // NVPTX intrinsics are namespaced under nvvm.
@@ -1016,6 +1018,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ve:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::fox32:
     return Triple::ELF;
 
   case Triple::mipsel:

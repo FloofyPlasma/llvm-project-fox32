@@ -3,6 +3,7 @@
 #ifndef LLVM_LIB_TARGET_FOX32_FOX32ISELLOWERING_H
 #define LLVM_LIB_TARGET_FOX32_FOX32ISELLOWERING_H
 
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
@@ -37,13 +38,11 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
   SDValue
-  LowerFormalArguments(SDValue Chain, CallingConv::ID /*CallConv*/,
-                       bool /*isVarArg*/,
-                       const SmallVectorImpl<ISD::InputArg> & /*Ins*/,
-                       const SDLoc & /*dl*/, SelectionDAG & /*DAG*/,
-                       SmallVectorImpl<SDValue> & /*InVals*/) const override {
-    return Chain;
-  }
+  LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
+                       bool isVarArg,
+                       const SmallVectorImpl<ISD::InputArg> & Ins,
+                       const SDLoc & dl, SelectionDAG & DAG,
+                       SmallVectorImpl<SDValue> & InVals) const override;
   /// getTargetNodeName - This method returns the name of a target specific
   //  DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;
