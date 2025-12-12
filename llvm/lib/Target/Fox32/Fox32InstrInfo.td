@@ -3,8 +3,8 @@ include "Fox32InstrFormats.td"
 
 //==---------- All SD nodes for Fox32 ------------------===//
 def Fox32RetSDN : SDNode<"Fox32ISD::Ret",
-                        SDTNone, // 0 results and 0 operands
-                        [SDNPHasChain, SDNPVariadic, SDNPOptInGlue]>;
+                         SDTNone, // 0 results and 0 operands
+                         [SDNPHasChain, SDNPVariadic, SDNPOptInGlue]>;
 //==---------- End SD Node definitions ----------------===//
 
 //==----------- Fox32 Instruction Definitions ----------===//
@@ -15,22 +15,53 @@ def PseudoRet : PseudoFox32Inst<(outs), (ins), "ret"> {
   let Uses = [r0];
 }
 
-def MOVri : Fox32Inst<(outs GPR32:$dst), (ins i32imm:$src), "mov $dst, $src"> {
-    let Pattern = [(set i32:$dst, imm:$src)];
-}
+defm MOV : Mov<"mov">;
 
-def ADDrr : Fox32Inst<(outs GPR32:$dst), (ins GPR32: $dst_in, GPR32:$src), "add $dst, $src"> {
-    let Pattern = [(set i32:$dst, (add i32:$dst_in, i32:$src))];
-    let Constraints = "$dst_in = $dst";
-}
+defm ADD : BinOp<"add", add>;
+defm SUB : BinOp<"sub", sub>;
+defm MUL : BinOp<"mul", mul>;
+defm IMUL : BinOp<"imul", mul>; // TODO: this needs custom lowering for signed
+                                // vs unsigned
+defm DIV : BinOp<"div", udiv>;
+defm IDIV : BinOp<"idiv", sdiv>;
+defm REM : BinOp<"rem", urem>;
+defm IREM : BinOp<"irem", srem>;
+
+defm AND : BinOp<"and", and>;
+defm OR : BinOp<"or", or>;
+defm XOR : BinOp<"xor", xor>;
+
+defm SLA : ShiftOp<"sla", shl>;
+defm SRA : ShiftOp<"sra", sra>;
+defm SRL : ShiftOp<"srl", srl>;
+
+// TODO: implement rotate operations
+// defm ROL : ShiftOp<"rol", rotl>;
+// defm ROR : ShiftOp<"ror", rotr>;
+
+defm NOT : NotOp<"not">;
+defm INC : IncOp<"inc">;
+defm DEC : DecOp<"dec">;
+
+defm CMP : Cmp<"cmp">;
+defm ICMP : Cmp<"icmp">;
+
+defm LOAD : Load<"mov">;
+defm STORE : Store<"mov">;
+
+defm PUSH : Push<"push">;
+defm POP : Pop<"pop">;
+
 //==--------- End Fox32 Instruction Definitions --------===//
 
 //==---- All patterns to match SD nodes -----------==//
 def : Pat<(Fox32RetSDN), (PseudoRet)>;
 
-def callseq_start : SDNode<"ISD::CALLSEQ_START", SDTNone, [SDNPHasChain, SDNPOutGlue]>;
+def callseq_start
+    : SDNode<"ISD::CALLSEQ_START", SDTNone, [SDNPHasChain, SDNPOutGlue]>;
 
-def callseq_end : SDNode<"ISD::CALLSEQ_END", SDTNone, [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def callseq_end : SDNode<"ISD::CALLSEQ_END",
+                         SDTNone, [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 
 def ADJCALLSTACKDOWN : Instruction {
   let OutOperandList = (outs);
