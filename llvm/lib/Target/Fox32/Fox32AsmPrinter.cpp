@@ -38,30 +38,46 @@ MCOperand Fox32AsmPrinter::lowerSymbolOperand(const MachineOperand &MO,
                                               MCSymbol *Sym) {
   auto &Ctx = OutContext;
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
-  assert(MO.isMBB() && "Only basic block symbols are supported");
+
+  if (!MO.isJTI() && !MO.isMBB() && MO.getOffset()) {
+    Expr = MCBinaryExpr::createAdd(
+        Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
+  }
+
   return MCOperand::createExpr(Expr);
 }
 
 void Fox32AsmPrinter::lowerInstruction(const MachineInstr &MI, MCInst &Inst) {
-  // This function should convert the MachineInstr to MCInst
-  // The implementation will depend on the specific instruction set
-  // and how you want to represent it in the MCInst format.
-  // For now, we will just print the opcode and operands.
-
   Inst.setOpcode(MI.getOpcode());
-  for (const auto &Op : MI.operands()) {
+
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
+
     MCOperand MCOp;
-    switch (Op.getType()) {
-    case MachineOperand::MO_Register:
-      MCOp = MCOperand::createReg(Op.getReg());
-      break;
-    case MachineOperand::MO_Immediate:
-      MCOp = MCOperand::createImm(Op.getImm());
-      break;
-    case MachineOperand::MO_MachineBasicBlock:
-      MCOp = lowerSymbolOperand(Op, Op.getMBB()->getSymbol());
-      break;
-    // Add other operand types as needed
+    switch (MO.getType()) {
+    case MachineOperand::MO_Register: {
+      if (MO.isUse() && MI.isRegTiedToDefOperand(i)) {
+        MCOp = MCOperand::createReg(MI.getOperand(i).getReg());
+      } else {
+        MCOp = MCOperand::createReg(MO.getReg());
+      }
+    } break;
+    case MachineOperand::MO_Immediate: {
+      MCOp = MCOperand::createImm(MO.getImm());
+    } break;
+    case MachineOperand::MO_MachineBasicBlock: {
+      MCOp = lowerSymbolOperand(MO, MO.getMBB()->getSymbol());
+    } break;
+    case MachineOperand::MO_GlobalAddress: {
+      MCOp = lowerSymbolOperand(MO, getSymbol(MO.getGlobal()));
+    } break;
+    case MachineOperand::MO_ExternalSymbol: {
+      MCOp =
+          lowerSymbolOperand(MO, GetExternalSymbolSymbol(MO.getSymbolName()));
+    } break;
+    case MachineOperand::MO_RegisterMask: {
+      // Register masks are used for call clobbers, skip them
+    } break;
     default:
       llvm_unreachable("Unsupported operand type");
     }
