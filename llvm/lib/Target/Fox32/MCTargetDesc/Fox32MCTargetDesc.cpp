@@ -1,5 +1,5 @@
 #include "Fox32MCTargetDesc.h"
-#include "Fox32TargetInfo.h"
+#include "TargetInfo/Fox32TargetInfo.h"
 
 #include "MCTargetDesc/Fox32MCAsmInfo.h"
 #include "MCTargetDesc/Fox32MCInstPrinter.h"

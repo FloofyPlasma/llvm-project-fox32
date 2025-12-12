@@ -1,6 +1,6 @@
 #include "Fox32TargetMachine.h"
 #include "Fox32.h"
-#include "Fox32TargetInfo.h"
+#include "TargetInfo/Fox32TargetInfo.h"
 
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -9,18 +9,8 @@
 
 using namespace llvm;
 
-Target &llvm::getTheFox32Target() {
-  static Target TheFox32Target;
-  return TheFox32Target;
-}
-
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeFox32TargetMC();
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeFox32AsmPrinter();
-
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeFox32TargetInfo() {
-  llvm::RegisterTarget<llvm::Triple::fox32> X(
-      ::getTheFox32Target(), "fox32", "Fox32 (32-bit little endian)", "Fox32");
-}
 
 extern "C" void LLVMInitializeFox32Target() {
   RegisterTargetMachine<Fox32TargetMachine> X(getTheFox32Target());

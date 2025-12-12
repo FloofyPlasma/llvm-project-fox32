@@ -12,9 +12,6 @@ tablegen(LLVM Fox32GenAsmWriter.inc -gen-asm-writer)
 add_public_tablegen_target(Fox32CommonTableGen)
 
 add_llvm_target(Fox32CodeGen
-    MCTargetDesc/Fox32MCTargetDesc.cpp
-    MCTargetDesc/Fox32MCAsmInfo.cpp
-    MCTargetDesc/Fox32MCInstPrinter.cpp
     Fox32AsmPrinter.cpp
     Fox32InstrInfo.cpp
     Fox32ISelDAGToDAG.cpp
@@ -25,6 +22,9 @@ add_llvm_target(Fox32CodeGen
     Fox32TargetObjectFile.cpp
 
     LINK_COMPONENTS
+    AsmPrinter
+    CodeGen
+    SelectionDAG
     MC
     TargetParser
     Target
@@ -32,3 +32,6 @@ add_llvm_target(Fox32CodeGen
     ADD_TO_COMPONENT
     Fox32
 )
+
+add_subdirectory(MCTargetDesc)
+add_subdirectory(TargetInfo)
