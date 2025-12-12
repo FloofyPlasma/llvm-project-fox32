@@ -15,6 +15,7 @@ enum NodeType : unsigned {
 
   // Return
   Ret,
+  Call,
 };
 } // end namespace Fox32ISD
 
@@ -37,12 +38,11 @@ public:
                       bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       LLVMContext &Context, const Type *RetTy) const override;
-  SDValue
-  LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
-                       bool isVarArg,
-                       const SmallVectorImpl<ISD::InputArg> & Ins,
-                       const SDLoc & dl, SelectionDAG & DAG,
-                       SmallVectorImpl<SDValue> & InVals) const override;
+  SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
+                               bool isVarArg,
+                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               const SDLoc &dl, SelectionDAG &DAG,
+                               SmallVectorImpl<SDValue> &InVals) const override;
   /// getTargetNodeName - This method returns the name of a target specific
   //  DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;

@@ -4,6 +4,7 @@
 include "llvm/Target/Target.td"
 
 include "Fox32RegisterInfo.td"
+include "Fox32CallingConv.td"
 include "Fox32InstrInfo.td"
 
 def : ProcessorModel<"generic", NoSchedModel, []>;

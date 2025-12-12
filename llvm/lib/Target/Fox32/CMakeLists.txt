@@ -5,6 +5,7 @@ set(LLVM_TARGET_DEFINITIONS Fox32.td)
 tablegen(LLVM Fox32GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM Fox32GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM Fox32GenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM Fox32GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM Fox32GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM Fox32GenAsmWriter.inc -gen-asm-writer)
 

@@ -1,44 +1,35 @@
 //===- Fox32IselLowering.cpp - Fox32 DAG Lowering Implementation
 //-----------===//
 #include "Fox32ISelLowering.h"
+#include "Fox32RegisterInfo.h"
 #include "Fox32Subtarget.h"
 #include "MCTargetDesc/Fox32MCTargetDesc.h"
 
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
-namespace {
-static bool CC_Fox32(unsigned ValNo, MVT ValVt, MVT LocVT,
-                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                     Type *OrigTy, // <-- Add this parameter
-                     CCState &State) {
-  static const MCPhysReg IntArgRegs[] = {
-      Fox32::r0, Fox32::r1, Fox32::r2, Fox32::r3,
-      Fox32::r4, Fox32::r5, Fox32::r6, Fox32::r7,
-  };
-
-  if (ValVt != MVT::i32) {
-    return true; // type not supported
-  }
-
-  if (unsigned Reg = State.AllocateReg(IntArgRegs)) {
-    State.addLoc(CCValAssign::getReg(ValNo, ValVt, Reg, LocVT, LocInfo));
-    return false;
-  }
-
-  llvm_unreachable("Stack arguments not implemented");
-}
-} // end anonymous namespace
-
 #define DEBUG_TYPE "fox32-isel"
+
+#include "Fox32GenCallingConv.inc"
 
 Fox32TargetLowering::Fox32TargetLowering(const TargetMachine &TM,
                                          const Fox32Subtarget &STI)
     : TargetLowering(TM) {
+  addRegisterClass(MVT::i8, &Fox32::GPR8RegClass);
+  addRegisterClass(MVT::i16, &Fox32::GPR16RegClass);
   addRegisterClass(MVT::i32, &Fox32::GPR32RegClass);
 
   computeRegisterProperties(STI.getRegisterInfo());
+
+  setStackPointerRegisterToSaveRestore(Fox32::rsp);
 }
 
 SDValue
@@ -46,40 +37,36 @@ Fox32TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  bool isVarArg,
                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
-                                 const SDLoc &Dl, SelectionDAG &DAG) const {
-  // Handle only integer return values
-  // we need to copy the value to the r0 register.
-  if (Outs.size() > 1) {
-    reportFatalUsageError(
-        "Multiple return values not supported\n"
-        "This could be because the return type is a struct or a large integer"
-        "that got split into multiple registers");
+                                 const SDLoc &dl, SelectionDAG &DAG) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
+                 *DAG.getContext());
+  CCInfo.AnalyzeReturn(Outs, RetCC_Fox32);
+
+  SDValue Flag;
+  SmallVector<SDValue, 4> RetOps(1, Chain);
+
+  // Copy return values to registers
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    CCValAssign &VA = RVLocs[i];
+    assert(VA.isRegLoc() && "Can only return in registers!");
+
+    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    Flag = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
-  if (Outs.size() == 0) {
-    return DAG.getNode(Fox32ISD::Ret, Dl, MVT::Other, Chain);
-  }
-
-  SDValue Glue;
-  SmallVector<SDValue, 3> RetOps(1, Chain);
-  for (unsigned I = 0, E = Outs.size(); I != E; ++I) {
-    const ISD::OutputArg &Out = Outs[I];
-    const SDValue &OutVal = OutVals[I];
-    if (!Out.ArgVT.isScalarInteger() || Out.ArgVT.getScalarSizeInBits() > 32) {
-      reportFatalUsageError("Only i32 return values are supported");
-    }
-    Chain = DAG.getCopyToReg(Chain, Dl, Fox32::r0, OutVal, Glue);
-    Glue = Chain.getValue(1);
-    RetOps.push_back(DAG.getRegister(Fox32::r0, Out.VT));
-  }
   RetOps[0] = Chain;
-  RetOps.push_back(Glue);
+  if (Flag.getNode()) {
+    RetOps.push_back(Flag);
+  }
 
-  return DAG.getNode(Fox32ISD::Ret, Dl, MVT::Other, RetOps);
+  return DAG.getNode(Fox32ISD::Ret, dl, MVT::Other, RetOps);
 }
 
 SDValue Fox32TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
+  // TODO: Implement call lowering
   return SDValue();
 }
 
@@ -94,6 +81,8 @@ const char *Fox32TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   case Fox32ISD::Ret:
     return "Fox32ISD::Ret";
+  case Fox32ISD::Call:
+    return "Fox32ISD::Call";
   default:
     return "Unknown Fox32ISD::Node";
   }
@@ -104,29 +93,45 @@ SDValue Fox32TargetLowering::LowerFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_Fox32);
 
-  for (unsigned i = 0; i != ArgLocs.size(); ++i) {
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
     if (VA.isRegLoc()) {
-      Register Reg = VA.getLocReg();
+      // Argument passed in register
+      EVT RegVT = VA.getLocVT();
+      const TargetRegisterClass *RC;
 
-      // Mark the register as live-in
-      if (!RegInfo.isLiveIn(Reg)) {
-        RegInfo.addLiveIn(Reg);
+      if (RegVT == MVT::i8) {
+        RC = &Fox32::GPR8RegClass;
+      } else if (RegVT == MVT::i16) {
+        RC = &Fox32::GPR16RegClass;
+      } else if (RegVT == MVT::i32) {
+        RC = &Fox32::GPR32RegClass;
+      } else {
+        llvm_unreachable("Unsupported argument type");
       }
 
-      Register VReg = RegInfo.createVirtualRegister(&Fox32::GPR32RegClass);
-      RegInfo.addLiveIn(Reg, VReg);
-      SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, VA.getValVT());
+      Register VReg = MF.getRegInfo().createVirtualRegister(RC);
+      MF.getRegInfo().addLiveIn(VA.getLocReg(), VReg);
+      SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, RegVT);
 
       InVals.push_back(ArgValue);
     } else {
-      llvm_unreachable("Stack arguments not implemented");
+      // Argument passed on stack
+      assert(VA.isMemLoc());
+      int FI = MFI.CreateFixedObject(VA.getValVT().getSizeInBits() / 8,
+                                     VA.getLocMemOffset(), true);
+      SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+      SDValue Load = DAG.getLoad(VA.getValVT(), dl, Chain, FIPtr,
+                                 MachinePointerInfo::getFixedStack(MF, FI));
+
+      InVals.push_back(Load);
     }
   }
 
