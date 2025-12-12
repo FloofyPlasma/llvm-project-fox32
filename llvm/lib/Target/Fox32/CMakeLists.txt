@@ -13,6 +13,7 @@ add_public_tablegen_target(Fox32CommonTableGen)
 
 add_llvm_target(Fox32CodeGen
     Fox32AsmPrinter.cpp
+    Fox32FrameLowering.cpp
     Fox32InstrInfo.cpp
     Fox32ISelDAGToDAG.cpp
     Fox32ISelLowering.cpp

@@ -1,8 +1,8 @@
 #include "Fox32.h"
 #include "Fox32Subtarget.h"
-#include "TargetInfo/Fox32TargetInfo.h"
 #include "Fox32TargetMachine.h"
 #include "MCTargetDesc/Fox32MCInstPrinter.h"
+#include "TargetInfo/Fox32TargetInfo.h"
 
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"

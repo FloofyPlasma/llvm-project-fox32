@@ -17,19 +17,16 @@ public:
   explicit Fox32FrameLowering(const Fox32Subtarget &STI, Align Alignment)
       : TargetFrameLowering(StackGrowsDown, Alignment, 0, Alignment) {}
 
-  void emitPrologue(MachineFunction &MF,
-                    MachineBasicBlock &MBB) const override {}
+  void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  void emitEpilogue(MachineFunction &MF,
-                    MachineBasicBlock &MBB) const override {}
-
-  bool hasFPImpl(const MachineFunction &MF) const override { return true; }
+  void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MI) const override {
-    return MBB.erase(MI);
-  }
+                                MachineBasicBlock::iterator MI) const override;
+
+private:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 } // end namespace llvm
 

@@ -22,8 +22,10 @@ public:
 
 char Fox32DAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(Fox32DAGToDAGISelLegacy, DEBUG_TYPE, "Fox32 DAG->DAG Instruction Selection", false, false)
-INITIALIZE_PASS_END(Fox32DAGToDAGISelLegacy, DEBUG_TYPE, "Fox32 DAG->DAG Instruction Selection", false, false)
+INITIALIZE_PASS_BEGIN(Fox32DAGToDAGISelLegacy, DEBUG_TYPE,
+                      "Fox32 DAG->DAG Instruction Selection", false, false)
+INITIALIZE_PASS_END(Fox32DAGToDAGISelLegacy, DEBUG_TYPE,
+                    "Fox32 DAG->DAG Instruction Selection", false, false)
 
 FunctionPass *llvm::createFox32ISelDagLegacy(Fox32TargetMachine &TM,
                                              CodeGenOptLevel OptLevel) {
@@ -41,7 +43,7 @@ void Fox32DAGToDagISel::Select(SDNode *Node) {
     Node->setNodeId(-1);
     return;
   }
-  
+
   // Try to select using tablegen-generated patterns
   SelectCode(Node);
 }

@@ -20,33 +20,35 @@ Fox32RegisterInfo::Fox32RegisterInfo() : Fox32GenRegisterInfo(Fox32::r0) {}
 // TODO: Are these correct?
 const MCPhysReg *
 Fox32RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  //   static const MCPhysReg CSRList[] = {
-  //       Fox32::rsp, // Stack pointer
-  //       Fox32::rfp, // Frame pointer
-  //       Fox32::r0,  // R0
-  //   };
-  static const MCPhysReg CSRList[] = {0};
-  return CSRList;
+  return CSR_Fox32_SaveList;
+}
+
+const uint32_t *
+Fox32RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                        CallingConv::ID CC) const {
+  return CSR_Fox32_RegMask;
 }
 
 // TODO: Are these correct?
 BitVector Fox32RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  static const MCPhysReg ReservedRegs[] = {
-      Fox32::rsp,
-      Fox32::rfp,
-      Fox32::r31, // `loop` and `rloop` are hard-coded to use this register as
-                  // the counter.
-  };
   BitVector Reserved(getNumRegs());
-  for (MCPhysReg Reg : ReservedRegs) {
-    Reserved.set(Reg);
-  }
+
+  // Stack pointer
+  Reserved.set(Fox32::rsp);
+
+  // Frame pointer
+  Reserved.set(Fox32::rfp);
+
+  // r31 (used by loop/rloop instructions)
+  Reserved.set(Fox32::r31);
+
   return Reserved;
 }
 
 bool Fox32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
+  // TODO: Implement frame index elimination.
   return true;
 }
 

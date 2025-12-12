@@ -71,19 +71,13 @@ multiclass BinOp<string opcode, SDNode node> {
 // Multiclass for MOV operations, register to register
 multiclass MovRR<string opcode> {
   def _8rr : Fox32Inst<(outs GPR8:$dst), (ins GPR8:$src),
-                       !strconcat(opcode, ".8 $dst, $src")> {
-    let Pattern = [(set i8:$dst, i8:$src)];
-  }
+                       !strconcat(opcode, ".8 $dst, $src")>;
 
   def _16rr : Fox32Inst<(outs GPR16:$dst), (ins GPR16:$src),
-                        !strconcat(opcode, ".16 $dst, $src")> {
-    let Pattern = [(set i16:$dst, i16:$src)];
-  }
+                        !strconcat(opcode, ".16 $dst, $src")>;
 
   def _32rr : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src),
-                        !strconcat(opcode, ".32 $dst, $src")> {
-    let Pattern = [(set i32:$dst, i32:$src)];
-  }
+                        !strconcat(opcode, ".32 $dst, $src")>;
 }
 
 // Multiclass for MOV immediate

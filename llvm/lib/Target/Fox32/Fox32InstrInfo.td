@@ -5,16 +5,18 @@ include "Fox32InstrFormats.td"
 def Fox32RetSDN : SDNode<"Fox32ISD::Ret",
                          SDTNone, // 0 results and 0 operands
                          [SDNPHasChain, SDNPVariadic, SDNPOptInGlue]>;
+
+def SDT_Fox32CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_Fox32CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+
+
+def SDT_Fox32Call : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+def Fox32Call : SDNode<"Fox32ISD::Call", SDT_Fox32Call,
+                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+
 //==---------- End SD Node definitions ----------------===//
 
 //==----------- Fox32 Instruction Definitions ----------===//
-def PseudoRet : PseudoFox32Inst<(outs), (ins), "ret"> {
-  let isReturn = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let Uses = [r0];
-}
-
 defm MOV : Mov<"mov">;
 
 defm ADD : BinOp<"add", add>;
@@ -52,33 +54,57 @@ defm STORE : Store<"mov">;
 defm PUSH : Push<"push">;
 defm POP : Pop<"pop">;
 
+let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
+  def RET : Fox32Inst<(outs), (ins), "ret"> {
+    let Uses = [rsp, r0];
+    let Defs = [rsp];
+  }
+}
+
+
+let isCall = 1, Defs = [rsp, r0], Uses = [rsp] in {
+  def CALL_32i : Fox32Inst<(outs), (ins i32imm:$dst, variable_ops), "call $dst">;
+  def CALL_32r : Fox32Inst<(outs), (ins GPR32:$dst, variable_ops), "call $dst">;
+}
+
 //==--------- End Fox32 Instruction Definitions --------===//
 
 //==---- All patterns to match SD nodes -----------==//
-def : Pat<(Fox32RetSDN), (PseudoRet)>;
 
-def callseq_start
-    : SDNode<"ISD::CALLSEQ_START", SDTNone, [SDNPHasChain, SDNPOutGlue]>;
+def : Pat<(Fox32RetSDN), (RET)>;
 
-def callseq_end : SDNode<"ISD::CALLSEQ_END",
-                         SDTNone, [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def : Pat<(Fox32Call tglobaladdr:$dst),
+          (CALL_32i tglobaladdr:$dst)>;
+def : Pat<(Fox32Call texternalsym:$dst),
+          (CALL_32i texternalsym:$dst)>;
+def : Pat<(Fox32Call GPR32:$dst),
+          (CALL_32r GPR32:$dst)>;
+
+def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_Fox32CallSeqStart,
+                           [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_Fox32CallSeqEnd,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 def ADJCALLSTACKDOWN : Instruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins);
+  let InOperandList = (ins i32imm:$amt1, i32imm:$amt2);
   let Namespace = "Fox32";
   let AsmString = "";
-  let Pattern = [(callseq_start)];
+  let Pattern = [(callseq_start timm:$amt1, timm:$amt2)];
   let isCodeGenOnly = 1;
   let hasSideEffects = 1;
+  let Defs = [rsp];
+  let Uses = [rsp];
 }
 
 def ADJCALLSTACKUP : Instruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins);
+  let InOperandList = (ins i32imm:$amt1, i32imm:$amt2);
   let Namespace = "Fox32";
   let AsmString = "";
-  let Pattern = [(callseq_end)];
+  let Pattern = [(callseq_end timm:$amt1, timm:$amt2)];
   let isCodeGenOnly = 1;
   let hasSideEffects = 1;
+  let Defs = [rsp];
+  let Uses = [rsp];
 }
