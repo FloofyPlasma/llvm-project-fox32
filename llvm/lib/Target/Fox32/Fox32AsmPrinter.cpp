@@ -40,6 +40,11 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   bool doInitialization(Module &M) override;
+  bool doFinalization(Module &M) override {
+    emitEndOfAsmFile(M);
+
+    return false;
+  }
 
   // Lower the MachineInstr to MCInst
   void lowerInstruction(const MachineInstr &MI, MCInst &Inst);
