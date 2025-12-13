@@ -6,6 +6,8 @@
 
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -25,14 +27,41 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
+  bool doInitialization(Module &M) override;
+
   // Lower the MachineInstr to MCInst
   void lowerInstruction(const MachineInstr &MI, MCInst &Inst);
 
   // bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 private:
   MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym);
+
+    bool isEntryPoint(StringRef Name) const {
+    return Name == "main" || Name == "_main" || Name == "__main" ||
+           Name == "_start" || Name == "main.main" || Name == "_Dmain" ||
+           Name == "__rust_start";
+  }
 };
 } // end anonymous namespace
+
+
+bool Fox32AsmPrinter::doInitialization(Module &M) {
+    Function *EntryFunc = nullptr;
+
+for (Function &F : M.getFunctionList()) {
+    if (!F.isDeclaration() && isEntryPoint(F.getName())) {
+      EntryFunc = &F;
+      break;
+    }
+  }
+
+    if (EntryFunc) {
+    M.getFunctionList().remove(*EntryFunc);
+    M.getFunctionList().push_front(EntryFunc);
+  }
+
+  return AsmPrinter::doInitialization(M);
+}
 
 MCOperand Fox32AsmPrinter::lowerSymbolOperand(const MachineOperand &MO,
                                               MCSymbol *Sym) {
