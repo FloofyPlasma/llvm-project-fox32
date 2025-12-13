@@ -16,6 +16,16 @@ class PseudoFox32Inst<dag outs, dag ins, string asmString>
   let isCodeGenOnly = 1;
 }
 
+def MEMri : Operand<iPTR> {
+  let PrintMethod = "printMemRegImmOperand";
+  let MIOperandInfo = (ops GPR32:$base, i32imm:$offset);
+}
+
+def MEMrr : Operand<iPTR> {
+  let PrintMethod = "printMemRegRegOperand";
+  let MIOperandInfo = (ops GPR32:$base, GPR32:$index);
+}
+
 //===----------------------------------------------------------------------===//
 //  Multiclasses for Automatic Size Variant Generation
 //===----------------------------------------------------------------------===//
@@ -244,6 +254,78 @@ multiclass Store<string opcode> {
   def _32mr : Fox32Inst<(outs), (ins i32imm:$addr, GPR32:$src),
                         !strconcat(opcode, ".32 [$addr], $src")> {
     let Pattern = [(store i32:$src, imm:$addr)];
+    let mayStore = 1;
+  }
+}
+
+// Multiclass for load operations with register+offset addressing
+multiclass LoadRegImm<string opcode> {
+  def _8rri : Fox32Inst<(outs GPR8:$dst), (ins MEMri:$addr),
+                        !strconcat(opcode, ".8 $dst, [$addr]")> {
+    let mayLoad = 1;
+  }
+
+  def _16rri : Fox32Inst<(outs GPR16:$dst), (ins MEMri:$addr),
+                         !strconcat(opcode, ".16 $dst, [$addr]")> {
+    let mayLoad = 1;
+  }
+
+  def _32rri : Fox32Inst<(outs GPR32:$dst), (ins MEMri:$addr),
+                         !strconcat(opcode, ".32 $dst, [$addr]")> {
+    let mayLoad = 1;
+  }
+}
+
+// Multiclass for store operations with register+offset addressing
+multiclass StoreRegImm<string opcode> {
+  def _8rri : Fox32Inst<(outs), (ins MEMri:$addr, GPR8:$src),
+                        !strconcat(opcode, ".8 [$addr], $src")> {
+    let mayStore = 1;
+  }
+
+  def _16rri : Fox32Inst<(outs), (ins MEMri:$addr, GPR16:$src),
+                         !strconcat(opcode, ".16 [$addr], $src")> {
+    let mayStore = 1;
+  }
+
+  def _32rri : Fox32Inst<(outs), (ins MEMri:$addr, GPR32:$src),
+                         !strconcat(opcode, ".32 [$addr], $src")> {
+    let mayStore = 1;
+  }
+}
+
+// Multiclass for load operations with register+register addressing
+multiclass LoadRegReg<string opcode> {
+  def _8rrr : Fox32Inst<(outs GPR8:$dst), (ins MEMrr:$addr),
+                        !strconcat(opcode, ".8 $dst, [$addr]")> {
+    let mayLoad = 1;
+  }
+
+  def _16rrr : Fox32Inst<(outs GPR16:$dst), (ins MEMrr:$addr),
+                         !strconcat(opcode, ".16 $dst, [$addr]")> {
+    let mayLoad = 1;
+  }
+
+  def _32rrr : Fox32Inst<(outs GPR32:$dst), (ins MEMrr:$addr),
+                         !strconcat(opcode, ".32 $dst, [$addr]")> {
+    let mayLoad = 1;
+  }
+}
+
+// Multiclass for store operations with register+register addressing
+multiclass StoreRegReg<string opcode> {
+  def _8rrr : Fox32Inst<(outs), (ins MEMrr:$addr, GPR8:$src),
+                        !strconcat(opcode, ".8 [$addr], $src")> {
+    let mayStore = 1;
+  }
+
+  def _16rrr : Fox32Inst<(outs), (ins MEMrr:$addr, GPR16:$src),
+                         !strconcat(opcode, ".16 [$addr], $src")> {
+    let mayStore = 1;
+  }
+
+  def _32rrr : Fox32Inst<(outs), (ins MEMrr:$addr, GPR32:$src),
+                         !strconcat(opcode, ".32 [$addr], $src")> {
     let mayStore = 1;
   }
 }

@@ -6,13 +6,14 @@ def Fox32RetSDN : SDNode<"Fox32ISD::Ret",
                          SDTNone, // 0 results and 0 operands
                          [SDNPHasChain, SDNPVariadic, SDNPOptInGlue]>;
 
-def SDT_Fox32CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-def SDT_Fox32CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
-
+def SDT_Fox32CallSeqStart
+    : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_Fox32CallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
 def SDT_Fox32Call : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
-def Fox32Call : SDNode<"Fox32ISD::Call", SDT_Fox32Call,
-                       [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+def Fox32Call
+    : SDNode<"Fox32ISD::Call", SDT_Fox32Call,
+             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
 //==---------- End SD Node definitions ----------------===//
 
@@ -56,6 +57,12 @@ defm ICMP : Cmp<"icmp">;
 defm LOAD : Load<"mov">;
 defm STORE : Store<"mov">;
 
+defm LOAD_REGIMM : LoadRegImm<"mov">;
+defm STORE_REGIMM : StoreRegImm<"mov">;
+
+defm LOAD_REGREG : LoadRegReg<"mov">;
+defm STORE_REGREG : StoreRegReg<"mov">;
+
 defm PUSH : Push<"push">;
 defm POP : Pop<"pop">;
 
@@ -66,9 +73,9 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   }
 }
 
-
 let isCall = 1, Defs = [rsp, r0], Uses = [rsp] in {
-  def CALL_32i : Fox32Inst<(outs), (ins calltarget:$dst, variable_ops), "call $dst">;
+  def CALL_32i
+      : Fox32Inst<(outs), (ins calltarget:$dst, variable_ops), "call $dst">;
   def CALL_32r : Fox32Inst<(outs), (ins GPR32:$dst, variable_ops), "call $dst">;
 }
 
@@ -78,17 +85,36 @@ let isCall = 1, Defs = [rsp, r0], Uses = [rsp] in {
 
 def : Pat<(Fox32RetSDN), (RET)>;
 
-def : Pat<(Fox32Call tglobaladdr:$dst),
-          (CALL_32i tglobaladdr:$dst)>;
-def : Pat<(Fox32Call texternalsym:$dst),
-          (CALL_32i texternalsym:$dst)>;
-def : Pat<(Fox32Call GPR32:$dst),
-          (CALL_32r GPR32:$dst)>;
+def : Pat<(Fox32Call tglobaladdr:$dst), (CALL_32i tglobaladdr:$dst)>;
+def : Pat<(Fox32Call texternalsym:$dst), (CALL_32i texternalsym:$dst)>;
+def : Pat<(Fox32Call GPR32:$dst), (CALL_32r GPR32:$dst)>;
 
-def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_Fox32CallSeqStart,
-                           [SDNPHasChain, SDNPOutGlue]>;
-def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_Fox32CallSeqEnd,
-                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def : Pat<(i8(load(add GPR32:$base, (i32 imm:$offset)))),
+          (LOAD_REGIMM_8rri GPR32:$base, imm:$offset)>;
+def : Pat<(i16(load(add GPR32:$base, (i32 imm:$offset)))),
+          (LOAD_REGIMM_16rri GPR32:$base, imm:$offset)>;
+def : Pat<(i32(load(add GPR32:$base, (i32 imm:$offset)))),
+          (LOAD_REGIMM_32rri GPR32:$base, imm:$offset)>;
+
+def : Pat<(store i8:$src, (add GPR32:$base, (i32 imm:$offset))),
+          (STORE_REGIMM_8rri GPR32:$base, imm:$offset, GPR8:$src)>;
+def : Pat<(store i16:$src, (add GPR32:$base, (i32 imm:$offset))),
+          (STORE_REGIMM_16rri GPR32:$base, imm:$offset, GPR16:$src)>;
+def : Pat<(store i32:$src, (add GPR32:$base, (i32 imm:$offset))),
+          (STORE_REGIMM_32rri GPR32:$base, imm:$offset, GPR32:$src)>;
+
+def : Pat<(i8(load(add GPR32:$base, GPR32:$index))),
+          (LOAD_REGREG_8rrr GPR32:$base, GPR32:$index)>;
+def : Pat<(i16(load(add GPR32:$base, GPR32:$index))),
+          (LOAD_REGREG_16rrr GPR32:$base, GPR32:$index)>;
+def : Pat<(i32(load(add GPR32:$base, GPR32:$index))),
+          (LOAD_REGREG_32rrr GPR32:$base, GPR32:$index)>;
+
+def callseq_start : SDNode<"ISD::CALLSEQ_START",
+                           SDT_Fox32CallSeqStart, [SDNPHasChain, SDNPOutGlue]>;
+def callseq_end
+    : SDNode<"ISD::CALLSEQ_END",
+             SDT_Fox32CallSeqEnd, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 def ADJCALLSTACKDOWN : Instruction {
   let OutOperandList = (outs);

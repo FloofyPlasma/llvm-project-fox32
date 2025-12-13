@@ -26,6 +26,8 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset);
+
 private:
 #include "Fox32GenDAGISel.inc"
 

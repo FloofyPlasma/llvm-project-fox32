@@ -47,3 +47,28 @@ void Fox32DAGToDagISel::Select(SDNode *Node) {
   // Try to select using tablegen-generated patterns
   SelectCode(Node);
 }
+
+bool Fox32DAGToDagISel::SelectAddr(SDValue Addr, SDValue &Base,
+                                   SDValue &Offset) {
+  // If the address is a FrameIndex, leave it to be matched by patterns
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i32);
+    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+    return true;
+  }
+
+  // If it's an ADD node, try to extract base + offset
+  if (Addr.getOpcode() == ISD::ADD) {
+    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+      Base = Addr.getOperand(0);
+      Offset =
+          CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr), MVT::i32);
+      return true;
+    }
+  }
+
+  // Otherwise use the address as base with 0 offset
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+  return true;
+}

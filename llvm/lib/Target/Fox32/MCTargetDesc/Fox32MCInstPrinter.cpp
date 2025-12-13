@@ -43,3 +43,32 @@ void Fox32InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     O << "(" << Expr << ")";
   }
 }
+
+void Fox32InstPrinter::printMemRegImmOperand(const MCInst *MI, unsigned OpNo,
+                                             raw_ostream &O) {
+  const MCOperand &Base = MI->getOperand(OpNo);
+  const MCOperand &Offset = MI->getOperand(OpNo + 1);
+
+  assert(Base.isReg() && "Expected register operand");
+
+  O << getRegisterName(Base.getReg());
+
+  if (Offset.isImm() && Offset.getImm() != 0) {
+    int64_t OffsetVal = Offset.getImm();
+    if (OffsetVal > 0) {
+      O << "+" << OffsetVal;
+    } else {
+      O << OffsetVal;
+    }
+  }
+}
+
+void Fox32InstPrinter::printMemRegRegOperand(const MCInst *MI, unsigned OpNo,
+                                             raw_ostream &O) {
+  const MCOperand &Base = MI->getOperand(OpNo);
+  const MCOperand &Index = MI->getOperand(OpNo + 1);
+
+  assert(Base.isReg() && Index.isReg() && "Expected register operands");
+
+  O << getRegisterName(Base.getReg()) << "+" << getRegisterName(Index.getReg());
+}
