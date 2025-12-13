@@ -21,6 +21,7 @@
 #include "Targets/BPF.h"
 #include "Targets/CSKY.h"
 #include "Targets/DirectX.h"
+#include "Targets/Fox32.h"
 #include "Targets/Hexagon.h"
 #include "Targets/Lanai.h"
 #include "Targets/LoongArch.h"
@@ -781,7 +782,10 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::xtensa:
     return std::make_unique<XtensaTargetInfo>(Triple, Opts);
-  }
+    
+  case llvm::Triple::fox32:
+    return std::make_unique<Fox32TargetInfo>(Triple, Opts);
+}
 }
 } // namespace targets
 } // namespace clang

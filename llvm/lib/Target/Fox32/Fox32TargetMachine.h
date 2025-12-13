@@ -12,7 +12,7 @@
 using namespace llvm;
 
 static const char *Fox32DataLayoutString =
-    "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64";
+    "e-p:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-a:0:32-n8:16:32-S32";
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   if (!RM) {

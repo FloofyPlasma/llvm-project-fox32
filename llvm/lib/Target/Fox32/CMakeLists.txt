@@ -25,6 +25,7 @@ add_llvm_target(Fox32CodeGen
     LINK_COMPONENTS
     AsmPrinter
     CodeGen
+    Core
     SelectionDAG
     MC
     TargetParser
