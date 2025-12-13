@@ -101,6 +101,10 @@ bool Fox32AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitFunctionEntryLabel();
 
   for (auto &MBB : MF) {
+    if (!MBB.pred_empty() || MBB.hasAddressTaken()) {
+      OutStreamer->emitLabel(MBB.getSymbol());
+    }
+
     for (auto &MI : MBB) {
       emitInstruction(&MI);
     }

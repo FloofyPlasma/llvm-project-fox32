@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/Support/Debug.h"
 
@@ -30,6 +31,11 @@ Fox32TargetLowering::Fox32TargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   setStackPointerRegisterToSaveRestore(Fox32::rsp);
+
+  setOperationAction(ISD::BR_CC, MVT::i32, Custom);
+  setOperationAction(ISD::BRCOND, MVT::Other, Custom);
+  setOperationAction(ISD::SETCC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
 }
 
 SDValue
@@ -184,6 +190,12 @@ const char *Fox32TargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "Fox32ISD::Ret";
   case Fox32ISD::Call:
     return "Fox32ISD::Call";
+  case Fox32ISD::CMP:
+    return "Fox32ISD::CMP";
+  case Fox32ISD::CMPICC:
+    return "Fox32ISD::CMPICC";
+  case Fox32ISD::BR_CC:
+    return "Fox32ISD::BR_CC";
   default:
     return "Unknown Fox32ISD::Node";
   }
@@ -258,4 +270,177 @@ SDValue Fox32TargetLowering::LowerCallResult(
   }
 
   return Chain;
+}
+
+SDValue Fox32TargetLowering::LowerOperation(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+  case ISD::BR_CC:
+    return LowerBR_CC(Op, DAG);
+  case ISD::SETCC:
+    return LowerSETCC(Op, DAG);
+  case ISD::BRCOND:
+    return LowerBRCOND(Op, DAG);
+  case ISD::SELECT_CC:
+    return LowerSELECT_CC(Op, DAG);
+  }
+
+  return TargetLowering::LowerOperation(Op, DAG);
+}
+
+static unsigned getCondCodeForSetCC(ISD::CondCode CC) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unsupported condition code");
+  case ISD::SETEQ:
+    return 1; // ifz
+  case ISD::SETNE:
+    return 2; // ifnz
+  case ISD::SETULT:
+    return 3; // ifc (carry set = less than for unsigned)
+  case ISD::SETUGE:
+    return 4; // ifnc (carry clear = greater or equal for unsigned)
+  case ISD::SETUGT:
+    return 5; // ifgt (neither zero nor carry)
+  case ISD::SETULE:
+    return 6; // iflteq (zero or carry)
+  // Signed comparisons (use ICMP instead of CMP)
+  case ISD::SETLT:
+    return 3; // ifc with ICMP
+  case ISD::SETGE:
+    return 4; // ifnc with ICMP
+  case ISD::SETGT:
+    return 5; // ifgt with ICMP
+  case ISD::SETLE:
+    return 6; // iflteq with ICMP
+  }
+}
+
+static bool isSignedCC(ISD::CondCode CC) {
+  switch (CC) {
+  case ISD::SETLT:
+  case ISD::SETLE:
+  case ISD::SETGT:
+  case ISD::SETGE:
+    return true;
+  default:
+    return false;
+  }
+}
+
+SDValue Fox32TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  SDLoc dl(Op);
+
+  SDValue Cmp = DAG.getNode(Fox32ISD::CMPICC, dl, MVT::Glue, LHS, RHS);
+
+  unsigned CondCode = getCondCodeForSetCC(CC);
+  SDValue CondVal = DAG.getConstant(CondCode, dl, MVT::i32);
+
+  return DAG.getNode(Fox32ISD::BR_CC, dl, MVT::Other, Chain, Dest, CondVal,
+                     Cmp);
+}
+
+SDValue Fox32TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Cond = Op.getOperand(1);
+  SDValue Dest = Op.getOperand(2);
+  SDLoc dl(Op);
+
+  if (Cond.getOpcode() == ISD::SETCC) {
+    SDValue LHS = Cond.getOperand(0);
+    SDValue RHS = Cond.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+
+    SDValue Cmp = DAG.getNode(Fox32ISD::CMPICC, dl, MVT::Glue, LHS, RHS);
+
+    unsigned CondCode = getCondCodeForSetCC(CC);
+    SDValue CondVal = DAG.getConstant(CondCode, dl, MVT::i32);
+
+    return DAG.getNode(Fox32ISD::BR_CC, dl, MVT::Other, Chain, Dest, CondVal,
+                       Cmp);
+  }
+
+  SDValue Zero = DAG.getConstant(0, dl, Cond.getValueType());
+  SDValue Cmp = DAG.getNode(Fox32ISD::CMPICC, dl, MVT::Glue, Cond, Zero);
+
+  SDValue CondVal = DAG.getConstant(2, dl, MVT::i32); // ifnz
+  return DAG.getNode(Fox32ISD::BR_CC, dl, MVT::Other, Chain, Dest, CondVal,
+                     Cmp);
+}
+
+SDValue Fox32TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  SDLoc dl(Op);
+
+  SDValue Cmp = DAG.getNode(Fox32ISD::CMPICC, dl, MVT::Glue, LHS, RHS);
+
+  unsigned CondCode = getCondCodeForSetCC(CC);
+  SDValue CondVal = DAG.getConstant(CondCode, dl, MVT::i32);
+
+  // Create a select that returns 1 if condition is true, 0 otherwise
+  SDValue One = DAG.getConstant(1, dl, MVT::i32);
+  SDValue Zero = DAG.getConstant(0, dl, MVT::i32);
+
+  return DAG.getNode(ISD::SELECT_CC, dl, MVT::i32, LHS, RHS, One, Zero,
+                     DAG.getCondCode(CC));
+}
+
+SDValue Fox32TargetLowering::LowerSELECT_CC(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue TrueV = Op.getOperand(2);
+  SDValue FalseV = Op.getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  SDLoc dl(Op);
+
+  // Fox32 doesn't have native conditional move instructions,
+  // so we lower SELECT_CC to branches using a diamond pattern:
+  //
+  //   cmp lhs, rhs
+  //   ifCC jmp true_bb
+  //   fallthrough to false_bb:
+  //     mov result, false_value
+  //     jmp end_bb
+  //   true_bb:
+  //     mov result, true_value
+  //   end_bb:
+  //     return result
+  //
+  // However, SelectionDAG lowering can't create basic blocks directly,
+  // so we return an empty SDValue to let LLVM's generic lowering
+  // handle it (which will create the branch structure automatically).
+
+  // For simple cases, we can try to use arithmetic tricks
+  // to avoid branches, but only for specific patterns
+
+  // Check if this is a simple comparison resulting in 0 or 1
+  if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV)) {
+    int64_t TrueVal = cast<ConstantSDNode>(TrueV)->getSExtValue();
+    int64_t FalseVal = cast<ConstantSDNode>(FalseV)->getSExtValue();
+
+    // Pattern: (x == y) ? 1 : 0  or  (x != y) ? 1 : 0
+    if ((TrueVal == 1 && FalseVal == 0)) {
+      // This is just SETCC, redirect to that
+      return DAG.getSetCC(dl, Op.getValueType(), LHS, RHS, CC);
+    }
+
+    // Pattern: (x == y) ? 0 : 1
+    if (TrueVal == 0 && FalseVal == 1) {
+      // Invert the condition
+      ISD::CondCode InvCC = ISD::getSetCCInverse(CC, LHS.getValueType());
+      return DAG.getSetCC(dl, Op.getValueType(), LHS, RHS, InvCC);
+    }
+  }
+
+  // For all other cases, return empty SDValue to use default lowering
+  // which will expand this into branches
+  return SDValue();
 }

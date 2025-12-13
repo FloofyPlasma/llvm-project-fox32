@@ -16,6 +16,9 @@ enum NodeType : unsigned {
   // Return
   Ret,
   Call,
+  CMP,
+  CMPICC,
+  BR_CC,
 };
 } // end namespace Fox32ISD
 
@@ -52,6 +55,13 @@ public:
   /// getTargetNodeName - This method returns the name of a target specific
   //  DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+
+  SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 };
 
 } // end namespace llvm

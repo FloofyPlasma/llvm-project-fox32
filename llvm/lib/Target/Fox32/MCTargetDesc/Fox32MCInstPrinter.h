@@ -26,6 +26,11 @@ public:
 
   void printMemRegRegOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
+  void printBranchOperand(const MCInst *MI, unsigned OpNo, uint64_t Address,
+                          raw_ostream &O);
+
+  void printCallOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+
   const char *getRegisterName(MCRegister Reg);
 
   std::pair<const char *, uint64_t>

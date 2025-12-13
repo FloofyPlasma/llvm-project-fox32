@@ -72,3 +72,13 @@ void Fox32InstPrinter::printMemRegRegOperand(const MCInst *MI, unsigned OpNo,
 
   O << getRegisterName(Base.getReg()) << "+" << getRegisterName(Index.getReg());
 }
+
+void Fox32InstPrinter::printBranchOperand(const MCInst *MI, unsigned OpNo,
+                                          uint64_t Address, raw_ostream &O) {
+  printOperand(MI, OpNo, O);
+}
+
+void Fox32InstPrinter::printCallOperand(const MCInst *MI, unsigned OpNo,
+                                        raw_ostream &O) {
+  printOperand(MI, OpNo, O);
+}

@@ -1,5 +1,4 @@
-//===-- Fox32InstrFormats.td - Fox32 Instruction Formats
-//--------------------===//
+//===-- Fox32InstrFormats.td - Fox32 Instruction Formats ----------------===//
 // This file contains the instruction formats for the Fox32 architecture.
 //===----------------------------------------------------------------------===//
 
@@ -178,12 +177,12 @@ multiclass DecOp<string opcode> {
 
 // Multiclass for comparison operations (no output, just sets flags)
 multiclass CmpRR<string opcode> {
-  def _8rr : Fox32Inst<(outs), (ins GPR8:$lhs, GPR8:$rhs),
+  def _8rr : Fox32Inst<(outs), (ins GPR32:$lhs, GPR32:$rhs),
                        !strconcat(opcode, ".8 $lhs, $rhs")> {
     let Defs = [zero_flag, carry_flag];
   }
 
-  def _16rr : Fox32Inst<(outs), (ins GPR16:$lhs, GPR16:$rhs),
+  def _16rr : Fox32Inst<(outs), (ins GPR32:$lhs, GPR32:$rhs),
                         !strconcat(opcode, ".16 $lhs, $rhs")> {
     let Defs = [zero_flag, carry_flag];
   }
@@ -195,12 +194,12 @@ multiclass CmpRR<string opcode> {
 }
 
 multiclass CmpRI<string opcode> {
-  def _8ri : Fox32Inst<(outs), (ins GPR8:$lhs, i8imm:$rhs),
+  def _8ri : Fox32Inst<(outs), (ins GPR32:$lhs, i8imm:$rhs),
                        !strconcat(opcode, ".8 $lhs, $rhs")> {
     let Defs = [zero_flag, carry_flag];
   }
 
-  def _16ri : Fox32Inst<(outs), (ins GPR16:$lhs, i16imm:$rhs),
+  def _16ri : Fox32Inst<(outs), (ins GPR32:$lhs, i16imm:$rhs),
                         !strconcat(opcode, ".16 $lhs, $rhs")> {
     let Defs = [zero_flag, carry_flag];
   }
