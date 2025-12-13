@@ -24,6 +24,12 @@ def SDT_Fox32BrCC
 def Fox32BrCC
     : SDNode<"Fox32ISD::BR_CC", SDT_Fox32BrCC, [SDNPHasChain, SDNPInGlue]>;
 
+def SDT_Fox32CMOV
+    : SDTypeProfile<
+          1, 3, [SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<3, i32>]>;
+
+def Fox32CMOV : SDNode<"Fox32ISD::CMOV", SDT_Fox32CMOV, [SDNPInGlue]>;
+
 //==---------- End SD Node definitions ----------------===//
 
 def addr : ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], []>;
@@ -46,8 +52,8 @@ defm MOV : Mov<"mov">;
 defm ADD : BinOp<"add", add>;
 defm SUB : BinOp<"sub", sub>;
 defm MUL : BinOp<"mul", mul>;
-defm IMUL : BinOp<"imul", mul>; // TODO: this needs custom lowering for signed
-                                // vs unsigned
+defm IMUL : BinOp<"imul", mul>; // TODO: this needs custom lowering for
+                                // signed vs unsigned
 defm DIV : BinOp<"div", udiv>;
 defm IDIV : BinOp<"idiv", sdiv>;
 defm REM : BinOp<"rem", urem>;
@@ -115,6 +121,22 @@ let isCall = 1, Defs = [rsp, r0], Uses = [rsp] in {
   def CALL_32i
       : Fox32Inst<(outs), (ins calltarget:$dst, variable_ops), "call $dst">;
   def CALL_32r : Fox32Inst<(outs), (ins GPR32:$dst, variable_ops), "call $dst">;
+}
+
+let Uses = [zero_flag, carry_flag], Constraints = "$src = $dst" in {
+  def CMOV_IFZ_32 : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
+                              "ifz mov $dst, $val">;
+  def CMOV_IFNZ_32 : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
+                               "ifnz mov $dst, $val">;
+  def CMOV_IFC_32 : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
+                              "ifc mov $dst, $val">;
+  def CMOV_IFNC_32 : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
+                               "ifnc mov $dst, $val">;
+  def CMOV_IFGT_32 : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
+                               "ifgt mov $dst, $val">;
+  def CMOV_IFLTEQ_32
+      : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
+                  "iflteq mov $dst, $val">;
 }
 
 //==--------- End Fox32 Instruction Definitions --------===//
@@ -193,6 +215,19 @@ def : Pat<(Fox32BrCC bb:$dst, 3), (JMP_IFC bb:$dst)>;
 def : Pat<(Fox32BrCC bb:$dst, 4), (JMP_IFNC bb:$dst)>;
 def : Pat<(Fox32BrCC bb:$dst, 5), (JMP_IFGT bb:$dst)>;
 def : Pat<(Fox32BrCC bb:$dst, 6), (JMP_IFLTEQ bb:$dst)>;
+
+def : Pat<(Fox32CMOV GPR32:$false, GPR32:$true, (i32 1)),
+          (CMOV_IFZ_32 GPR32:$false, GPR32:$true)>;
+def : Pat<(Fox32CMOV GPR32:$false, GPR32:$true, (i32 2)),
+          (CMOV_IFNZ_32 GPR32:$false, GPR32:$true)>;
+def : Pat<(Fox32CMOV GPR32:$false, GPR32:$true, (i32 3)),
+          (CMOV_IFC_32 GPR32:$false, GPR32:$true)>;
+def : Pat<(Fox32CMOV GPR32:$false, GPR32:$true, (i32 4)),
+          (CMOV_IFNC_32 GPR32:$false, GPR32:$true)>;
+def : Pat<(Fox32CMOV GPR32:$false, GPR32:$true, (i32 5)),
+          (CMOV_IFGT_32 GPR32:$false, GPR32:$true)>;
+def : Pat<(Fox32CMOV GPR32:$false, GPR32:$true, (i32 6)),
+          (CMOV_IFLTEQ_32 GPR32:$false, GPR32:$true)>;
 
 //==---------- Call Sequence Patterns ------------------===//
 

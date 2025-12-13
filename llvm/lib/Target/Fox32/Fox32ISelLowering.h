@@ -19,6 +19,7 @@ enum NodeType : unsigned {
   CMP,
   CMPICC,
   BR_CC,
+  CMOV,
 };
 } // end namespace Fox32ISD
 

@@ -36,6 +36,27 @@ Fox32TargetLowering::Fox32TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+
+  setOperationAction(ISD::SELECT, MVT::i32, Custom);
+
+  setBooleanContents(ZeroOrOneBooleanContent);
+
+  // Fox32 doesn't have instructions that return both high and low parts
+  // Tell LLVM to expand these into separate operations
+  setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
+  setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
+  setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
+  setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
+  setOperationAction(ISD::SMUL_LOHI, MVT::i8, Expand);
+  setOperationAction(ISD::UMUL_LOHI, MVT::i8, Expand);
+
+  // Also expand MULHU and MULHS if they appear
+  setOperationAction(ISD::MULHU, MVT::i32, Expand);
+  setOperationAction(ISD::MULHS, MVT::i32, Expand);
+  setOperationAction(ISD::MULHU, MVT::i16, Expand);
+  setOperationAction(ISD::MULHS, MVT::i16, Expand);
+  setOperationAction(ISD::MULHU, MVT::i8, Expand);
+  setOperationAction(ISD::MULHS, MVT::i8, Expand);
 }
 
 SDValue
@@ -196,6 +217,8 @@ const char *Fox32TargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "Fox32ISD::CMPICC";
   case Fox32ISD::BR_CC:
     return "Fox32ISD::BR_CC";
+  case Fox32ISD::CMOV:
+    return "Fox32ISD::CMOV";
   default:
     return "Unknown Fox32ISD::Node";
   }
@@ -379,17 +402,23 @@ SDValue Fox32TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
   SDLoc dl(Op);
 
+  // Perform comparison to set flags
   SDValue Cmp = DAG.getNode(Fox32ISD::CMPICC, dl, MVT::Glue, LHS, RHS);
 
   unsigned CondCode = getCondCodeForSetCC(CC);
+
+  // Use conditional move to materialize the boolean result
+  // Strategy:
+  // 1. Start with result = 0
+  // 2. If condition is true: result = 1 (using conditional mov)
+
+  SDValue Zero = DAG.getConstant(0, dl, MVT::i32);
+  SDValue One = DAG.getConstant(1, dl, MVT::i32);
   SDValue CondVal = DAG.getConstant(CondCode, dl, MVT::i32);
 
-  // Create a select that returns 1 if condition is true, 0 otherwise
-  SDValue One = DAG.getConstant(1, dl, MVT::i32);
-  SDValue Zero = DAG.getConstant(0, dl, MVT::i32);
-
-  return DAG.getNode(ISD::SELECT_CC, dl, MVT::i32, LHS, RHS, One, Zero,
-                     DAG.getCondCode(CC));
+  // Create a Fox32-specific node for conditional move
+  // This will be pattern-matched to: ifCC mov result, 1
+  return DAG.getNode(Fox32ISD::CMOV, dl, MVT::i32, Zero, One, CondVal, Cmp);
 }
 
 SDValue Fox32TargetLowering::LowerSELECT_CC(SDValue Op,
@@ -400,26 +429,6 @@ SDValue Fox32TargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue FalseV = Op.getOperand(3);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
   SDLoc dl(Op);
-
-  // Fox32 doesn't have native conditional move instructions,
-  // so we lower SELECT_CC to branches using a diamond pattern:
-  //
-  //   cmp lhs, rhs
-  //   ifCC jmp true_bb
-  //   fallthrough to false_bb:
-  //     mov result, false_value
-  //     jmp end_bb
-  //   true_bb:
-  //     mov result, true_value
-  //   end_bb:
-  //     return result
-  //
-  // However, SelectionDAG lowering can't create basic blocks directly,
-  // so we return an empty SDValue to let LLVM's generic lowering
-  // handle it (which will create the branch structure automatically).
-
-  // For simple cases, we can try to use arithmetic tricks
-  // to avoid branches, but only for specific patterns
 
   // Check if this is a simple comparison resulting in 0 or 1
   if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV)) {
@@ -440,7 +449,13 @@ SDValue Fox32TargetLowering::LowerSELECT_CC(SDValue Op,
     }
   }
 
-  // For all other cases, return empty SDValue to use default lowering
-  // which will expand this into branches
-  return SDValue();
+  // For all other cases, use conditional move
+  SDValue Cmp = DAG.getNode(Fox32ISD::CMPICC, dl, MVT::Glue, LHS, RHS);
+
+  unsigned CondCode = getCondCodeForSetCC(CC);
+  SDValue CondVal = DAG.getConstant(CondCode, dl, MVT::i32);
+
+  // Use CMOV: if condition is true, use TrueV, otherwise use FalseV
+  return DAG.getNode(Fox32ISD::CMOV, dl, Op.getValueType(), FalseV, TrueV,
+                     CondVal, Cmp);
 }
