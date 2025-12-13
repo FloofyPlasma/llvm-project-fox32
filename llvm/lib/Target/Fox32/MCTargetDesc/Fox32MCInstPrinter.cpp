@@ -36,5 +36,10 @@ void Fox32InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(Op.isExpr() && "unknown operand type");
-  O << Op.getExpr();
+  const MCExpr *Expr = Op.getExpr();
+  if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(Expr)) {
+    O << SRE->getSymbol();
+  } else {
+    O << "(" << Expr << ")";
+  }
 }

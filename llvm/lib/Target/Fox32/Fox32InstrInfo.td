@@ -16,6 +16,11 @@ def Fox32Call : SDNode<"Fox32ISD::Call", SDT_Fox32Call,
 
 //==---------- End SD Node definitions ----------------===//
 
+def calltarget : Operand<iPTR> {
+  let EncoderMethod = "getCallTargetOpValue";
+  let DecoderMethod = "decodeCallTarget";
+}
+
 //==----------- Fox32 Instruction Definitions ----------===//
 defm MOV : Mov<"mov">;
 
@@ -63,7 +68,7 @@ let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
 
 
 let isCall = 1, Defs = [rsp, r0], Uses = [rsp] in {
-  def CALL_32i : Fox32Inst<(outs), (ins i32imm:$dst, variable_ops), "call $dst">;
+  def CALL_32i : Fox32Inst<(outs), (ins calltarget:$dst, variable_ops), "call $dst">;
   def CALL_32r : Fox32Inst<(outs), (ins GPR32:$dst, variable_ops), "call $dst">;
 }
 
