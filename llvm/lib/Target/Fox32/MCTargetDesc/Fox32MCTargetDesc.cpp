@@ -5,8 +5,10 @@
 #include "MCTargetDesc/Fox32MCInstPrinter.h"
 
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 

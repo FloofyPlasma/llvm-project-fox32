@@ -10,13 +10,13 @@ void Fox32TargetObjectFile::Initialize(MCContext &Ctx,
                                        const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
 
-  DefaultSection = static_cast<MCSection *>(Ctx.getELFSection(
-      ".fox32", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC));
+  DefaultSection = Ctx.getObjectFileInfo()->getTextSection();
 
   TextSection = DefaultSection;
   DataSection = DefaultSection;
   BSSSection = DefaultSection;
   ReadOnlySection = DefaultSection;
+  StackSizesSection = nullptr;
 }
 
 MCSection *Fox32TargetObjectFile::getSectionForConstant(

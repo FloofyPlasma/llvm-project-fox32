@@ -3,6 +3,7 @@
 #include "MCTargetDesc/Fox32MCTargetDesc.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
@@ -48,8 +49,35 @@ BitVector Fox32RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 bool Fox32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
-  // TODO: Implement frame index elimination.
-  return true;
+  MachineInstr &MI = *II;
+  MachineFunction &MF = *MI.getParent()->getParent();
+  const Fox32FrameLowering *TFL = getFrameLowering(MF);
+
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+
+  Offset += MI.getOperand(FIOperandNum + 1).getImm();
+
+  Register BaseReg = getFrameRegister(MF);
+
+  // If we have a frame pointer we should caluclate offset from it
+  if (TFL->hasFP(MF)) {
+    BaseReg = Fox32::rfp;
+
+    Offset = -Offset;
+  } else {
+    // No frame pointer gotta use the stack pointer
+    BaseReg = Fox32::rsp;
+
+    Offset += MF.getFrameInfo().getStackSize();
+  }
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(BaseReg, false);
+
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+
+  return false;
 }
 
 Register Fox32RegisterInfo::getFrameRegister(const MachineFunction &MF) const {

@@ -17,6 +17,8 @@ def Fox32Call
 
 //==---------- End SD Node definitions ----------------===//
 
+def addr : ComplexPattern<iPTR, 2, "SelectAddr", [frameindex], []>;
+
 def calltarget : Operand<iPTR> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "decodeCallTarget";
@@ -109,6 +111,36 @@ def : Pat<(i16(load(add GPR32:$base, GPR32:$index))),
           (LOAD_REGREG_16rrr GPR32:$base, GPR32:$index)>;
 def : Pat<(i32(load(add GPR32:$base, GPR32:$index))),
           (LOAD_REGREG_32rrr GPR32:$base, GPR32:$index)>;
+
+// Patterns for loading with complex addressing (handles frameindex)
+def : Pat<(i32 (load addr:$src)),
+          (LOAD_REGIMM_32rri addr:$src)>;
+
+def : Pat<(i16 (load addr:$src)),
+          (LOAD_REGIMM_16rri addr:$src)>;
+
+def : Pat<(i8 (load addr:$src)),
+          (LOAD_REGIMM_8rri addr:$src)>;
+
+// Patterns for storing with complex addressing (handles frameindex)
+def : Pat<(store GPR32:$val, addr:$dst),
+          (STORE_REGIMM_32rri addr:$dst, GPR32:$val)>;
+
+def : Pat<(store GPR16:$val, addr:$dst),
+          (STORE_REGIMM_16rri addr:$dst, GPR16:$val)>;
+
+def : Pat<(store GPR8:$val, addr:$dst),
+          (STORE_REGIMM_8rri addr:$dst, GPR8:$val)>;
+
+// Patterns for storing constants with complex addressing
+def : Pat<(store (i32 imm:$val), addr:$dst),
+          (STORE_REGIMM_32rri addr:$dst, (MOV_32ri imm:$val))>;
+
+def : Pat<(store (i16 imm:$val), addr:$dst),
+          (STORE_REGIMM_16rri addr:$dst, (MOV_16ri imm:$val))>;
+
+def : Pat<(store (i8 imm:$val), addr:$dst),
+          (STORE_REGIMM_8rri addr:$dst, (MOV_8ri imm:$val))>;
 
 def callseq_start : SDNode<"ISD::CALLSEQ_START",
                            SDT_Fox32CallSeqStart, [SDNPHasChain, SDNPOutGlue]>;

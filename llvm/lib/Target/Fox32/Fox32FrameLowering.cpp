@@ -55,6 +55,10 @@ void Fox32FrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII.get(Fox32::PUSH_32r))
         .addReg(FPReg, RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
+
+    BuildMI(MBB, MBBI, DL, TII.get(Fox32::MOV_32rr))
+        .addReg(SPReg)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // Step 2: Allocate stack space

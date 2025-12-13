@@ -72,12 +72,10 @@ void Fox32AsmPrinter::emitEndOfAsmFile(Module &M) {
 }
 
 void Fox32AsmPrinter::emitFunctionEntryLabel() {
-    OutStreamer->emitLabel(CurrentFnSym);
+  OutStreamer->emitLabel(CurrentFnSym);
 }
 
-void Fox32AsmPrinter::emitFunctionBodyStart() {
-    emitFunctionEntryLabel();
-}
+void Fox32AsmPrinter::emitFunctionBodyStart() { emitFunctionEntryLabel(); }
 
 void Fox32AsmPrinter::emitFunctionBodyEnd() {}
 
