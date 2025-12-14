@@ -39,7 +39,6 @@ bool Fox32DAGToDagISel::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void Fox32DAGToDagISel::Select(SDNode *Node) {
-  // If already selected, skip
   if (Node->isMachineOpcode()) {
     Node->setNodeId(-1);
     return;
@@ -47,26 +46,41 @@ void Fox32DAGToDagISel::Select(SDNode *Node) {
 
   SDLoc DL(Node);
   unsigned Opcode = Node->getOpcode();
-  
-  // Handle FrameIndex nodes - these need to be materialized as addresses
   if (Opcode == ISD::FrameIndex) {
     FrameIndexSDNode *FIN = cast<FrameIndexSDNode>(Node);
-    
-    // Use SelectAddr to convert this to base+offset form
-    SDValue Base, Offset;
-    if (SelectAddr(SDValue(Node, 0), Base, Offset)) {
-      // Create an ADD instruction: ADD dst, base, offset
-      // This materializes the frame address into a register
-      SDNode *Res = CurDAG->getMachineNode(
-          Fox32::ADD_32ri, DL, MVT::i32,
-          Base, Offset);
-      
-      ReplaceNode(Node, Res);
-      return;
+    int FI = FIN->getIndex();
+
+    MachineFunction *MF = &CurDAG->getMachineFunction();
+    const Fox32Subtarget &ST = MF->getSubtarget<Fox32Subtarget>();
+    const Fox32FrameLowering *TFL = ST.getFrameLowering();
+    const MachineFrameInfo &MFI = MF->getFrameInfo();
+
+    int64_t Offset = MFI.getObjectOffset(FI);
+    if (Offset < 0) {
+      Offset = -Offset;
     }
+
+    unsigned FrameReg = TFL->hasFP(*MF) ? Fox32::rfp : Fox32::rsp;
+
+    if (Offset == 0) {
+      SDValue FrameRegVal = CurDAG->getRegister(FrameReg, MVT::i32);
+      SDNode *MovNode =
+          CurDAG->getMachineNode(Fox32::MOV_32rr, DL, MVT::i32, FrameRegVal);
+      ReplaceNode(Node, MovNode);
+    } else {
+      SDValue FrameRegVal = CurDAG->getRegister(FrameReg, MVT::i32);
+      SDNode *MovNode =
+          CurDAG->getMachineNode(Fox32::MOV_32rr, DL, MVT::i32, FrameRegVal);
+
+      SDValue MovVal = SDValue(MovNode, 0);
+      SDValue OffsetVal = CurDAG->getTargetConstant(Offset, DL, MVT::i32);
+      SDNode *AddNode = CurDAG->getMachineNode(Fox32::ADD_32ri, DL, MVT::i32,
+                                               MovVal, OffsetVal);
+      ReplaceNode(Node, AddNode);
+    }
+    return;
   }
 
-  // Try to select using tablegen-generated patterns
   SelectCode(Node);
 }
 
