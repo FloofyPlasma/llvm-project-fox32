@@ -206,6 +206,10 @@ def : Pat<(i32 tframeindex:$fi), (LEA_FrameIndex tframeindex:$fi, (i32 0))>;
 // def : Pat<(store(i8 imm:$val), addr:$dst), (STORE_REGIMM_8rri addr:$dst,
 //                                                (MOV_8ri imm:$val))>;
 
+def : Pat<(i8(trunc GPR32:$src)), (COPY_TO_REGCLASS GPR32:$src, GPR8)>;
+def : Pat<(i16(trunc GPR32:$src)), (COPY_TO_REGCLASS GPR32:$src, GPR16)>;
+def : Pat<(i8(trunc GPR16:$src)), (COPY_TO_REGCLASS GPR16:$src, GPR8)>;
+
 //==---------- Branch Patterns ------------------===//
 
 // Unconditional branch
