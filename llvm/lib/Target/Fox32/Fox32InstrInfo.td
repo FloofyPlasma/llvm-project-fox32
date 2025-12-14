@@ -92,7 +92,7 @@ defm POP : Pop<"pop">;
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def RET : Fox32Inst<(outs), (ins), "ret"> {
-    let Uses = [rsp, r0];
+    let Uses = [rsp];
     let Defs = [rsp];
   }
 }
@@ -103,7 +103,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 }
 
 // Conditional branches
-let isBranch = 1, isTerminator = 1, Uses = [zero_flag, carry_flag] in {
+let isBranch = 1, isTerminator = 1 in {
   def JMP_IFZ : Fox32Inst<(outs), (ins brtarget:$dst), "ifz jmp $dst">;
 
   def JMP_IFNZ : Fox32Inst<(outs), (ins brtarget:$dst), "ifnz jmp $dst">;
@@ -123,7 +123,7 @@ let isCall = 1, Defs = [rsp, r0], Uses = [rsp] in {
   def CALL_32r : Fox32Inst<(outs), (ins GPR32:$dst, variable_ops), "call $dst">;
 }
 
-let Uses = [zero_flag, carry_flag], Constraints = "$src = $dst" in {
+let Constraints = "$src = $dst" in {
   def CMOV_IFZ_32 : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
                               "ifz mov $dst, $val">;
   def CMOV_IFNZ_32 : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src, GPR32:$val),
@@ -188,14 +188,14 @@ def : Pat<(store GPR8:$val, addr:$dst), (STORE_REGIMM_8rri addr:$dst,
                                             GPR8:$val)>;
 
 // Patterns for storing constants with complex addressing
-def : Pat<(store(i32 imm:$val), addr:$dst), (STORE_REGIMM_32rri addr:$dst,
-                                                (MOV_32ri imm:$val))>;
+// def : Pat<(store(i32 imm:$val), addr:$dst), (STORE_REGIMM_32rri addr:$dst,
+//                                                 (MOV_32ri imm:$val))>;
 
-def : Pat<(store(i16 imm:$val), addr:$dst), (STORE_REGIMM_16rri addr:$dst,
-                                                (MOV_16ri imm:$val))>;
+// def : Pat<(store(i16 imm:$val), addr:$dst), (STORE_REGIMM_16rri addr:$dst,
+//                                                 (MOV_16ri imm:$val))>;
 
-def : Pat<(store(i8 imm:$val), addr:$dst), (STORE_REGIMM_8rri addr:$dst,
-                                               (MOV_8ri imm:$val))>;
+// def : Pat<(store(i8 imm:$val), addr:$dst), (STORE_REGIMM_8rri addr:$dst,
+//                                                (MOV_8ri imm:$val))>;
 
 //==---------- Branch Patterns ------------------===//
 

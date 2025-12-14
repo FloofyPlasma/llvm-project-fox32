@@ -1,6 +1,7 @@
 #include "Fox32ISelDAGToDAG.h"
 #include "Fox32Subtarget.h"
 #include "Fox32TargetMachine.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Pass.h"
@@ -50,25 +51,31 @@ void Fox32DAGToDagISel::Select(SDNode *Node) {
 
 bool Fox32DAGToDagISel::SelectAddr(SDValue Addr, SDValue &Base,
                                    SDValue &Offset) {
-  // If the address is a FrameIndex, leave it to be matched by patterns
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i32);
-    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+  SDLoc DL(Addr);
+  MachineFunction *MF = &CurDAG->getMachineFunction();
+  const Fox32Subtarget &ST = MF->getSubtarget<Fox32Subtarget>();
+  const Fox32FrameLowering *TFL = ST.getFrameLowering();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(Addr)) {
+    int FIOffset = MFI.getObjectOffset(FI->getIndex());
+    bool HasFP = TFL->hasFP(*MF);
+
+    Base = CurDAG->getRegister(HasFP ? Fox32::rfp : Fox32::rsp, MVT::i32);
+    Offset = CurDAG->getTargetConstant(
+        FIOffset + (HasFP ? 0 : MFI.getStackSize()), DL, MVT::i32);
     return true;
   }
 
-  // If it's an ADD node, try to extract base + offset
   if (Addr.getOpcode() == ISD::ADD) {
-    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+    if (auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
       Base = Addr.getOperand(0);
-      Offset =
-          CurDAG->getTargetConstant(CN->getSExtValue(), SDLoc(Addr), MVT::i32);
+      Offset = CurDAG->getTargetConstant(CN->getSExtValue(), DL, MVT::i32);
       return true;
     }
   }
 
-  // Otherwise use the address as base with 0 offset
   Base = Addr;
-  Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+  Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   return true;
 }

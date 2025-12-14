@@ -41,6 +41,8 @@ Fox32TargetLowering::Fox32TargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
+
   // Fox32 doesn't have instructions that return both high and low parts
   // Tell LLVM to expand these into separate operations
   setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
@@ -116,6 +118,8 @@ SDValue Fox32TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
+  // First pass: prepare all arguments (do extensions, etc.)
+  SmallVector<SDValue, 8> PreparedArgs;
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
     SDValue Arg = OutVals[i];
@@ -136,8 +140,21 @@ SDValue Fox32TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       break;
     }
 
-    // Arguments that can be passed in registers must be kept in the RegsToPass
-    // vector
+    // CRITICAL FIX: If this is a constant, create a new node for each use
+    // This prevents the scheduler from getting confused by shared constant
+    // nodes
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Arg)) {
+      Arg = DAG.getConstant(C->getAPIntValue(), dl, Arg.getValueType());
+    }
+
+    PreparedArgs.push_back(Arg);
+  }
+
+  // Second pass: assign to registers or stack
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    SDValue Arg = PreparedArgs[i];
+
     if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
     } else {
@@ -157,9 +174,11 @@ SDValue Fox32TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
   }
 
+  // Build the glue chain for register arguments
   SDValue InGlue;
-  for (auto &Reg : RegsToPass) {
-    Chain = DAG.getCopyToReg(Chain, dl, Reg.first, Reg.second, InGlue);
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
+    Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
+                             RegsToPass[i].second, InGlue);
     InGlue = Chain.getValue(1);
   }
 
@@ -168,15 +187,14 @@ SDValue Fox32TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
     Callee = DAG.getTargetExternalSymbol(E->getSymbol(), MVT::i32);
 
-  // The first call operand is the chain and the second is the target address
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
 
-  // Add argument registers to the end of the list so they are known live into
-  // the call
-  for (auto &Reg : RegsToPass)
-    Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+  // Add argument registers
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
+    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
+                                  RegsToPass[i].second.getValueType()));
 
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
@@ -306,6 +324,8 @@ SDValue Fox32TargetLowering::LowerOperation(SDValue Op,
     return LowerBRCOND(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
+  case ISD::FrameIndex:
+    return LowerFrameIndex(Op, DAG);
   }
 
   return TargetLowering::LowerOperation(Op, DAG);
@@ -407,11 +427,6 @@ SDValue Fox32TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   unsigned CondCode = getCondCodeForSetCC(CC);
 
-  // Use conditional move to materialize the boolean result
-  // Strategy:
-  // 1. Start with result = 0
-  // 2. If condition is true: result = 1 (using conditional mov)
-
   SDValue Zero = DAG.getConstant(0, dl, MVT::i32);
   SDValue One = DAG.getConstant(1, dl, MVT::i32);
   SDValue CondVal = DAG.getConstant(CondCode, dl, MVT::i32);
@@ -458,4 +473,15 @@ SDValue Fox32TargetLowering::LowerSELECT_CC(SDValue Op,
   // Use CMOV: if condition is true, use TrueV, otherwise use FalseV
   return DAG.getNode(Fox32ISD::CMOV, dl, Op.getValueType(), FalseV, TrueV,
                      CondVal, Cmp);
+}
+
+SDValue Fox32TargetLowering::LowerFrameIndex(SDValue Op,
+                                             SelectionDAG &DAG) const {
+
+  int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+  EVT VT = Op.getValueType();
+
+  SDLoc DL(Op);
+
+  return DAG.getTargetFrameIndex(FI, VT);
 }

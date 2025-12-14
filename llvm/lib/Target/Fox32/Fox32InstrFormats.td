@@ -17,12 +17,12 @@ class PseudoFox32Inst<dag outs, dag ins, string asmString>
 
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemRegImmOperand";
-  let MIOperandInfo = (ops GPR32:$base, i32imm:$offset);
+  let MIOperandInfo = (ops GPR32OrSP:$base, i32imm:$offset);
 }
 
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemRegRegOperand";
-  let MIOperandInfo = (ops GPR32:$base, GPR32:$index);
+  let MIOperandInfo = (ops GPR32OrSP:$base, GPR32:$index);
 }
 
 //===----------------------------------------------------------------------===//
@@ -139,21 +139,18 @@ multiclass IncOp<string opcode> {
                       !strconcat(opcode, ".8 $dst")> {
     let Pattern = [(set i8:$dst, (add i8:$src, 1))];
     let Constraints = "$src = $dst";
-    let Defs = [zero_flag, carry_flag];
   }
 
   def _16r : Fox32Inst<(outs GPR16:$dst), (ins GPR16:$src),
                        !strconcat(opcode, ".16 $dst")> {
     let Pattern = [(set i16:$dst, (add i16:$src, 1))];
     let Constraints = "$src = $dst";
-    let Defs = [zero_flag, carry_flag];
   }
 
   def _32r : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src),
                        !strconcat(opcode, ".32 $dst")> {
     let Pattern = [(set i32:$dst, (add i32:$src, 1))];
     let Constraints = "$src = $dst";
-    let Defs = [zero_flag, carry_flag];
   }
 }
 
@@ -163,57 +160,42 @@ multiclass DecOp<string opcode> {
                       !strconcat(opcode, ".8 $dst")> {
     let Pattern = [(set i8:$dst, (add i8:$src, -1))];
     let Constraints = "$src = $dst";
-    let Defs = [zero_flag, carry_flag];
   }
 
   def _16r : Fox32Inst<(outs GPR16:$dst), (ins GPR16:$src),
                        !strconcat(opcode, ".16 $dst")> {
     let Pattern = [(set i16:$dst, (add i16:$src, -1))];
     let Constraints = "$src = $dst";
-    let Defs = [zero_flag, carry_flag];
   }
 
   def _32r : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src),
                        !strconcat(opcode, ".32 $dst")> {
     let Pattern = [(set i32:$dst, (add i32:$src, -1))];
     let Constraints = "$src = $dst";
-    let Defs = [zero_flag, carry_flag];
   }
 }
 
 // Multiclass for comparison operations (no output, just sets flags)
 multiclass CmpRR<string opcode> {
   def _8rr : Fox32Inst<(outs), (ins GPR32:$lhs, GPR32:$rhs),
-                       !strconcat(opcode, ".8 $lhs, $rhs")> {
-    let Defs = [zero_flag, carry_flag];
-  }
+                       !strconcat(opcode, ".8 $lhs, $rhs")>;
 
   def _16rr : Fox32Inst<(outs), (ins GPR32:$lhs, GPR32:$rhs),
-                        !strconcat(opcode, ".16 $lhs, $rhs")> {
-    let Defs = [zero_flag, carry_flag];
-  }
+                        !strconcat(opcode, ".16 $lhs, $rhs")>;
 
   def _32rr : Fox32Inst<(outs), (ins GPR32:$lhs, GPR32:$rhs),
-                        !strconcat(opcode, ".32 $lhs, $rhs")> {
-    let Defs = [zero_flag, carry_flag];
-  }
+                        !strconcat(opcode, ".32 $lhs, $rhs")>;
 }
 
 multiclass CmpRI<string opcode> {
   def _8ri : Fox32Inst<(outs), (ins GPR32:$lhs, i8imm:$rhs),
-                       !strconcat(opcode, ".8 $lhs, $rhs")> {
-    let Defs = [zero_flag, carry_flag];
-  }
+                       !strconcat(opcode, ".8 $lhs, $rhs")>;
 
   def _16ri : Fox32Inst<(outs), (ins GPR32:$lhs, i16imm:$rhs),
-                        !strconcat(opcode, ".16 $lhs, $rhs")> {
-    let Defs = [zero_flag, carry_flag];
-  }
+                        !strconcat(opcode, ".16 $lhs, $rhs")>;
 
   def _32ri : Fox32Inst<(outs), (ins GPR32:$lhs, i32imm:$rhs),
-                        !strconcat(opcode, ".32 $lhs, $rhs")> {
-    let Defs = [zero_flag, carry_flag];
-  }
+                        !strconcat(opcode, ".32 $lhs, $rhs")>;
 }
 
 multiclass Cmp<string opcode> {

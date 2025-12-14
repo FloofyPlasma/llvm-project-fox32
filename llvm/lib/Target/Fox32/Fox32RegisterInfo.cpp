@@ -51,33 +51,40 @@ bool Fox32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             RegScavenger *RS) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const Fox32FrameLowering *TFL = getFrameLowering(MF);
 
-  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-
-  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
-
-  Offset += MI.getOperand(FIOperandNum + 1).getImm();
+  int FI = MI.getOperand(FIOperandNum).getIndex();
+  int Offset = MFI.getObjectOffset(FI) + SPAdj;
 
   Register BaseReg = getFrameRegister(MF);
 
-  // If we have a frame pointer we should caluclate offset from it
-  if (TFL->hasFP(MF)) {
-    BaseReg = Fox32::rfp;
-
-    Offset = -Offset;
-  } else {
-    // No frame pointer gotta use the stack pointer
-    BaseReg = Fox32::rsp;
-
-    Offset += MF.getFrameInfo().getStackSize();
+  if (!TFL->hasFP(MF)) {
+    Offset += MFI.getStackSize();
   }
 
+  // Replace the frame index with the base register
   MI.getOperand(FIOperandNum).ChangeToRegister(BaseReg, false);
 
-  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  // Check if there's an offset operand (there should be for MEMri addressing
+  // mode)
+  if (FIOperandNum + 1 < MI.getNumOperands()) {
+    MachineOperand &OffOp = MI.getOperand(FIOperandNum + 1);
+    if (OffOp.isImm()) {
+      // Add the frame offset to the existing immediate offset
+      OffOp.setImm(OffOp.getImm() + Offset);
+    } else {
+      // If the next operand isn't an immediate, we need to add a new offset
+      // operand This shouldn't normally happen with properly formed
+      // instructions
+      MI.addOperand(MachineOperand::CreateImm(Offset));
+    }
+  } else {
+    // No offset operand exists, add one
+    MI.addOperand(MachineOperand::CreateImm(Offset));
+  }
 
-  return false;
+  return true;
 }
 
 Register Fox32RegisterInfo::getFrameRegister(const MachineFunction &MF) const {

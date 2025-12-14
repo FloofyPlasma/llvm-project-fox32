@@ -1,5 +1,4 @@
 // Fox32 CPU Registers
-
 class Fox32Reg<string n> : Register<n> { let Namespace = "Fox32"; }
 
 class Fox32GPRReg<string n, bits<5> num> : Register<n> {
@@ -39,40 +38,36 @@ let Namespace = "Fox32" in {
 // Primary 32-bit general purpose register class
 def GPR32 : RegisterClass<"Fox32", [i32], 32, (sequence "r%u", 0, 31)>;
 
-// 16-bit register class (alaises the same physical registers as GPR32)
+// 16-bit register class (aliases the same physical registers as GPR32)
 def GPR16 : RegisterClass<"Fox32", [i16], 16, (sequence "r%u", 0, 31)> {
   let CopyCost =
       -1; // Copy between GPR16 and GPR32 is free (same physical registers)
 }
 
-// 8-bit register class (alaises the same physical registers as GPR32)
+// 8-bit register class (aliases the same physical registers as GPR32)
 def GPR8 : RegisterClass<"Fox32", [i8], 8, (sequence "r%u", 0, 31)> {
   let CopyCost =
       -1; // Copy between GPR8 and GPR32 is free (same physical registers)
 }
 
-// Special-purpose register classes (allocatable for specific pruposes)
-def SPReg32 : RegisterClass<"Fox32", [i32], 32, (add rsp, resp, rfp)>;
+// GPR32 plus stack/frame pointers for use as base registers in memory
+// operations
+def GPR32OrSP : RegisterClass<"Fox32", [i32], 32, (add GPR32, rsp, rfp)> {
+  let CopyCost = -1; // Free to use SP/FP as base registers
+}
 
-def IPReg32 : RegisterClass<"Fox32", [i32], 32, (add rip)>;
-
-def FlagReg32
-    : RegisterClass<"Fox32", [i32], 32,
-                    (add zero_flag, carry_flag, interrupt_flag, swap_sp_flag)>;
-
-def MMUReg32 : RegisterClass<"Fox32", [i32], 32,
-                             (add mmu_enabled_flag, page_directory_ptr)>;
+// Special-purpose register class (stack pointers)
+def SPReg32 : RegisterClass<"Fox32", [i32], 32, (add rsp, resp, rfp)> {
+  let CopyCost = -1; // Free to copy between SPReg32 and GPR32
+}
 
 // Non-allocatable register classes (reserved for specific uses)
 let isAllocatable = 0 in {
   def CPUStackReg : RegisterClass<"Fox32", [i32], 32, (add rsp, resp, rfp)>;
-
   def CPUIPReg : RegisterClass<"Fox32", [i32], 32, (add rip)>;
-
   def CPUFlagReg : RegisterClass<"Fox32", [i32], 32,
                                  (add zero_flag, carry_flag, interrupt_flag,
                                      swap_sp_flag)>;
-
   def CPUMMUReg : RegisterClass<"Fox32", [i32], 32,
                                 (add mmu_enabled_flag, page_directory_ptr)>;
 }

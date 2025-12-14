@@ -63,6 +63,7 @@ public:
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
 };
 
 } // end namespace llvm
