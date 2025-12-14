@@ -139,6 +139,12 @@ let Constraints = "$src = $dst" in {
                   "iflteq mov $dst, $val">;
 }
 
+// Materialize frame index as address in register
+let isPseudo = 1, isCodeGenOnly = 1 in {
+  def LEA_FrameIndex
+      : Fox32Inst<(outs GPR32:$dst), (ins MEMri:$addr), "# LEA $dst, $addr">;
+}
+
 //==--------- End Fox32 Instruction Definitions --------===//
 
 //==---- All patterns to match SD nodes -----------==//
@@ -186,6 +192,9 @@ def : Pat<(store GPR16:$val, addr:$dst), (STORE_REGIMM_16rri addr:$dst,
 
 def : Pat<(store GPR8:$val, addr:$dst), (STORE_REGIMM_8rri addr:$dst,
                                             GPR8:$val)>;
+
+// Pattern to select frame index address materialization
+def : Pat<(i32 tframeindex:$fi), (LEA_FrameIndex tframeindex:$fi, (i32 0))>;
 
 // Patterns for storing constants with complex addressing
 // def : Pat<(store(i32 imm:$val), addr:$dst), (STORE_REGIMM_32rri addr:$dst,

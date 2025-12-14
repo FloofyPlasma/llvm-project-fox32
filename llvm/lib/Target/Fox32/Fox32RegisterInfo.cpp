@@ -63,6 +63,8 @@ bool Fox32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     Offset += MFI.getStackSize();
   }
 
+  Offset = -Offset;
+
   // Replace the frame index with the base register
   MI.getOperand(FIOperandNum).ChangeToRegister(BaseReg, false);
 

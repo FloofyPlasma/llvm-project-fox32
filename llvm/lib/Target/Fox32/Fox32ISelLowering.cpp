@@ -41,7 +41,7 @@ Fox32TargetLowering::Fox32TargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
-  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
+//   setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
 
   // Fox32 doesn't have instructions that return both high and low parts
   // Tell LLVM to expand these into separate operations
@@ -324,8 +324,8 @@ SDValue Fox32TargetLowering::LowerOperation(SDValue Op,
     return LowerBRCOND(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
-  case ISD::FrameIndex:
-    return LowerFrameIndex(Op, DAG);
+//   case ISD::FrameIndex:
+    // return LowerFrameIndex(Op, DAG);
   }
 
   return TargetLowering::LowerOperation(Op, DAG);

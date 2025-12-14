@@ -45,6 +45,27 @@ void Fox32DAGToDagISel::Select(SDNode *Node) {
     return;
   }
 
+  SDLoc DL(Node);
+  unsigned Opcode = Node->getOpcode();
+  
+  // Handle FrameIndex nodes - these need to be materialized as addresses
+  if (Opcode == ISD::FrameIndex) {
+    FrameIndexSDNode *FIN = cast<FrameIndexSDNode>(Node);
+    
+    // Use SelectAddr to convert this to base+offset form
+    SDValue Base, Offset;
+    if (SelectAddr(SDValue(Node, 0), Base, Offset)) {
+      // Create an ADD instruction: ADD dst, base, offset
+      // This materializes the frame address into a register
+      SDNode *Res = CurDAG->getMachineNode(
+          Fox32::ADD_32ri, DL, MVT::i32,
+          Base, Offset);
+      
+      ReplaceNode(Node, Res);
+      return;
+    }
+  }
+
   // Try to select using tablegen-generated patterns
   SelectCode(Node);
 }
@@ -52,29 +73,34 @@ void Fox32DAGToDagISel::Select(SDNode *Node) {
 bool Fox32DAGToDagISel::SelectAddr(SDValue Addr, SDValue &Base,
                                    SDValue &Offset) {
   SDLoc DL(Addr);
-  MachineFunction *MF = &CurDAG->getMachineFunction();
-  const Fox32Subtarget &ST = MF->getSubtarget<Fox32Subtarget>();
-  const Fox32FrameLowering *TFL = ST.getFrameLowering();
-  MachineFrameInfo &MFI = MF->getFrameInfo();
 
-  if (auto *FI = dyn_cast<FrameIndexSDNode>(Addr)) {
-    int FIOffset = MFI.getObjectOffset(FI->getIndex());
-    bool HasFP = TFL->hasFP(*MF);
-
-    Base = CurDAG->getRegister(HasFP ? Fox32::rfp : Fox32::rsp, MVT::i32);
-    Offset = CurDAG->getTargetConstant(
-        FIOffset + (HasFP ? 0 : MFI.getStackSize()), DL, MVT::i32);
+  // If this is a FrameIndex, convert it to a TargetFrameIndex
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i32);
+    Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
     return true;
   }
 
+  // Handle ADD with immediate offset (base + offset)
   if (Addr.getOpcode() == ISD::ADD) {
-    if (auto *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+    // Check if right operand is a constant
+    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+      // Check if left operand is a FrameIndex
+      if (FrameIndexSDNode *FIN =
+              dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i32);
+        Offset = CurDAG->getTargetConstant(CN->getSExtValue(), DL, MVT::i32);
+        return true;
+      }
+
+      // Regular register + offset
       Base = Addr.getOperand(0);
       Offset = CurDAG->getTargetConstant(CN->getSExtValue(), DL, MVT::i32);
       return true;
     }
   }
 
+  // Default: base with 0 offset
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   return true;
