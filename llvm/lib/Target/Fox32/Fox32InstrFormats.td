@@ -139,18 +139,21 @@ multiclass IncOp<string opcode> {
                       !strconcat(opcode, ".8 $dst")> {
     let Pattern = [(set i8:$dst, (add i8:$src, 1))];
     let Constraints = "$src = $dst";
+    let Defs = [zero_flag, carry_flag];
   }
 
   def _16r : Fox32Inst<(outs GPR16:$dst), (ins GPR16:$src),
                        !strconcat(opcode, ".16 $dst")> {
     let Pattern = [(set i16:$dst, (add i16:$src, 1))];
     let Constraints = "$src = $dst";
+    let Defs = [zero_flag, carry_flag];
   }
 
   def _32r : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src),
                        !strconcat(opcode, ".32 $dst")> {
     let Pattern = [(set i32:$dst, (add i32:$src, 1))];
     let Constraints = "$src = $dst";
+    let Defs = [zero_flag, carry_flag];
   }
 }
 
@@ -160,18 +163,21 @@ multiclass DecOp<string opcode> {
                       !strconcat(opcode, ".8 $dst")> {
     let Pattern = [(set i8:$dst, (add i8:$src, -1))];
     let Constraints = "$src = $dst";
+    let Defs = [zero_flag, carry_flag];
   }
 
   def _16r : Fox32Inst<(outs GPR16:$dst), (ins GPR16:$src),
                        !strconcat(opcode, ".16 $dst")> {
     let Pattern = [(set i16:$dst, (add i16:$src, -1))];
     let Constraints = "$src = $dst";
+    let Defs = [zero_flag, carry_flag];
   }
 
   def _32r : Fox32Inst<(outs GPR32:$dst), (ins GPR32:$src),
                        !strconcat(opcode, ".32 $dst")> {
     let Pattern = [(set i32:$dst, (add i32:$src, -1))];
     let Constraints = "$src = $dst";
+    let Defs = [zero_flag, carry_flag];
   }
 }
 
